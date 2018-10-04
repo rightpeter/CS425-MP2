@@ -1,8 +1,9 @@
+// Package server package for server
+package server
+
 // refer to https://varshneyabhi.wordpress.com/2014/12/23/simple-udp-clientserver-in-golang/
-package main
 
 import (
-	"CS425/CS425-MP1/model"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -10,6 +11,8 @@ import (
 	"net"
 	"strings"
 	"time"
+
+	"CS425/CS425-MP2/model"
 )
 
 type suspeciousStatus int
@@ -19,8 +22,8 @@ type messageType int
 const (
 	alive             suspeciousStatus = 0
 	suspect           suspeciousStatus = 1
-	payloasJoin       payloadType      = 0
-	payloasLeave      payloadType      = 1
+	payloadJoin       payloadType      = 0
+	payloadLeave      payloadType      = 1
 	payloadSuspicious payloadType      = 2
 	payloadAlive      payloadType      = 3
 	messagePing       messageType      = 0
@@ -56,32 +59,34 @@ type Server struct {
 }
 
 // NewServer init a server
-func NewServer() *Server {
-	return &Server{}
+func NewServer(jsonFile []byte) *Server {
+	server := &Server{}
+	server.loadConfigFromJSON(jsonFile)
+	return server
 }
 
 func (s *Server) loadConfigFromJSON(jsonFile []byte) error {
 	return json.Unmarshal(jsonFile, &s.config)
 }
 
-func (s *Server) getIP() string {
-	return s.config.Current.IP
+// GetIP getip for server
+func (s *Server) GetIP() string {
+	return s.config.IP
 }
 
-func (s *Server) setIP(IP string) {
-	s.config.Current.IP = IP
+// SetIP setip for server
+func (s *Server) SetIP(IP string) {
+	s.config.IP = IP
 }
 
-func (s *Server) getPort() int {
-	return s.config.Current.Port
+// GetPort getport of server
+func (s *Server) GetPort() int {
+	return s.config.Port
 }
 
-func (s *Server) setPort(port int) {
-	s.config.Current.Port = port
-}
-
-func (s *Server) getIP() string {
-	return s.config.Current.IP
+// SetPort setport for server
+func (s *Server) SetPort(port int) {
+	s.config.Port = port
 }
 
 // ListenUDP Server listen to udp
@@ -97,6 +102,7 @@ func (s *Server) ListenUDP() error {
 	if err != nil {
 		return err
 	}
+	return nil
 }
 
 func (s *Server) generatePingList() {
@@ -111,18 +117,18 @@ func (s *Server) suspectNode(nodeID string) {
 	log.Fatalln("suspectNode TODO!!!")
 }
 
-func (s *Server) pushCachedMessage(mType payloadType, nodeID string, message []byte, timeout time.Time) {
+func (s *Server) pushCachedMessage(mType payloadType, nodeID string, message []byte, timeout time.Duration) {
 	log.Fatalln("pushCachedMessage TODO!!!")
 }
 
-func (s *Server) getCachedMessage() {
+func (s *Server) getCachedMessage() []string {
 	// Get cached messages from s.suspiciousCachedMessage, s.joinCachedMessage, s.leaveCachedMessage
-	log.Fatalln("getCachedMessage TODO!!!")
+	return []string{"getCachedMessage TODO!!!"}
 }
 
 // Ping ping/ack error detection
 func (s *Server) Ping(nodeID string, ch chan bool) {
-	pingAddr, err := net.ResolveUDPAddr("udp", fmt.Sprintf("$s:$d", strings.Split(nodeID, '-')[0], s.config.Port))
+	pingAddr, err := net.ResolveUDPAddr("udp", fmt.Sprintf("%s:%d", strings.Split(nodeID, "-")[0], s.config.Port))
 	if err != nil {
 		ch <- false
 		return
@@ -143,55 +149,52 @@ func (s *Server) Ping(nodeID string, ch chan bool) {
 		buf.WriteString(fmt.Sprintf(":%s", message))
 	}
 
-	_, err := conn.Write(buf)
+	_, err = conn.Write(buf.Bytes())
 	if err != nil {
 		ch <- false
 		return
 	}
 
-	n, addr, err := conn.ReadFrom(buf)
+	n, addr, err := conn.ReadFrom(buf.Bytes())
 	if err != nil {
 		ch <- false
 		return
 	}
-	s.DealWithMessage(n, addr, buf)
+	s.DealWithMessage(n, addr, buf.Bytes())
 }
 
 // DealWithJoin will deal with new joins in our network
-func (s *Server) DealWithJoin(inpMsg string) err {
+func (s *Server) DealWithJoin(inpMsg string) error {
 	// Assuming that inpMsg is in the form 2:ip_ts
-	ipTS := strings.Split(inpMsg, ':')[1]
+	ipTS := strings.Split(inpMsg, ":")[1]
 
 	// TODO: need to generate id_ts
-	nodeID = "id_ts"
+	nodeID := "id_ts"
 
 	ni := nodeInfo{
-		IP:   strings.Split(ipTS)[0],
-		Port: 8081,
-		Inc:  0,
-		Suspecious: suspeciousStatus{
-			Type: 0,
-			Inc:  0,
-		},
+		IP:         strings.Split(ipTS, ":")[0],
+		Port:       8081,
+		Inc:        0,
+		Suspecious: alive,
 	}
 	s.memList[nodeID] = ni
 
-	s.pushCachedMessage(messageJoin, nodeID, inpMsg, s.pingTimeout)
+	s.pushCachedMessage(payloadJoin, nodeID, []byte(inpMsg), time.Millisecond*time.Duration(s.pingTimeout))
 
 	return nil
 }
 
 // DealWithMessage deal with all kinds of messages
 // buf: 0:ip-ts:0_ip-ts_2:1_ip-ts_1:2_ip-ts_234:3_ip-ts_223
-func (s *Server) DealWithMessage(n int, addr *net.UDPAddr, buf []byte) {
+func (s *Server) DealWithMessage(n int, addr net.Addr, buf []byte) {
 	fmt.Println("Received ", string(buf[0:n]), " from ", addr)
 
 	inpMsg := string(buf[0:n])
 
-	if strings.Split(inpMsg, ':')[0] == '2' {
-		_ := s.DealWithJoin(inpMsg)
+	if strings.Split(inpMsg, ":")[0] == "2" {
+		_ = s.DealWithJoin(inpMsg)
 		// Return memlist to ip_ts
-		s.ServerConn.WriteTo(s.memList, addr)
+		// s.ServerConn.WriteTo(s.memList, addr)
 	}
 
 	s.ServerConn.WriteTo(buf, addr)
@@ -202,17 +205,17 @@ func (s *Server) FailureDetection() error {
 	for {
 		s.checkAvailability()
 		nodeID := s.pingList[s.pingIter]
-		ch := make(chan string)
+		ch := make(chan bool)
 		s.Ping(nodeID, ch)
 
 		select {
-		case res <- ch:
+		case res := <-ch:
 			if res {
-				pingIter++
+				s.pingIter++
 			} else {
 				s.suspectNode(nodeID)
 			}
-		case <-time.After(s.pingTimeout * time.Millisecond):
+		case <-time.After(time.Duration(s.pingTimeout) * time.Millisecond):
 			s.suspectNode(nodeID)
 		}
 
