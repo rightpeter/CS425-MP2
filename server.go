@@ -2,7 +2,9 @@
 package main
 
 import (
-	"byte"
+	"CS425/CS425-MP1/model"
+	"bytes"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net"
@@ -155,10 +157,43 @@ func (s *Server) Ping(nodeID string, ch chan bool) {
 	s.DealWithMessage(n, addr, buf)
 }
 
+// DealWithJoin will deal with new joins in our network
+func (s *Server) DealWithJoin(inpMsg string) err {
+	// Assuming that inpMsg is in the form 2:ip_ts
+	ipTS := strings.Split(inpMsg, ':')[1]
+
+	// TODO: need to generate id_ts
+	nodeID = "id_ts"
+
+	ni := nodeInfo{
+		IP:   strings.Split(ipTS)[0],
+		Port: 8081,
+		Inc:  0,
+		Suspecious: suspeciousStatus{
+			Type: 0,
+			Inc:  0,
+		},
+	}
+	s.memList[nodeID] = ni
+
+	s.pushCachedMessage(messageJoin, nodeID, inpMsg, s.pingTimeout)
+
+	return nil
+}
+
 // DealWithMessage deal with all kinds of messages
 // buf: 0:ip-ts:0_ip-ts_2:1_ip-ts_1:2_ip-ts_234:3_ip-ts_223
 func (s *Server) DealWithMessage(n int, addr *net.UDPAddr, buf []byte) {
 	fmt.Println("Received ", string(buf[0:n]), " from ", addr)
+
+	inpMsg := string(buf[0:n])
+
+	if strings.Split(inpMsg, ':')[0] == '2' {
+		_ := s.DealWithJoin(inpMsg)
+		// Return memlist to ip_ts
+		s.ServerConn.WriteTo(s.memList, addr)
+	}
+
 	s.ServerConn.WriteTo(buf, addr)
 }
 
