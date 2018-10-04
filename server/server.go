@@ -164,12 +164,12 @@ func (s *Server) Ping(nodeID string, ch chan bool) {
 }
 
 // DealWithJoin will deal with new joins in our network
-func (s *Server) DealWithJoin(inpMsg string) error {
+func (s *Server) DealWithJoin(inpMsg []byte) error {
 	// Assuming that inpMsg is in the form 2:ip_ts
-	ipTS := strings.Split(inpMsg, ":")[1]
+	ipTS := bytes.Split(inpMsg, []byte(":"))[1]
 
 	// TODO: need to generate id_ts
-	nodeID := "id_ts"
+	nodeID := "id-ts"
 
 	ni := nodeInfo{
 		IP:         strings.Split(ipTS, ":")[0],
@@ -188,6 +188,15 @@ func (s *Server) DealWithJoin(inpMsg string) error {
 // buf: 0:ip-ts:0_ip-ts_2:1_ip-ts_1:2_ip-ts_234:3_ip-ts_223
 func (s *Server) DealWithMessage(n int, addr net.Addr, buf []byte) {
 	fmt.Println("Received ", string(buf[0:n]), " from ", addr)
+
+	bufList = bytes.Split(buf, []byte(':'))
+	switch bufList[0] {
+	case messageAck:
+
+	case messagePing:
+	case messageJoin:
+		s.DealWithJoin(bytes.Split(buf[2:]))
+	}
 
 	inpMsg := string(buf[0:n])
 
