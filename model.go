@@ -1,4 +1,4 @@
-package model
+package main
 
 // NodeConfig Structure of node config
 type NodeConfig struct {
