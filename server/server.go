@@ -41,6 +41,7 @@ type nodeInfo struct {
 type suspiciousMessage struct {
 	Type suspeciousStatus
 	Inc  int
+	TS   time.Time
 }
 
 // Server server class
@@ -138,7 +139,7 @@ func (s *Server) pushCachedMessage(mType payloadType, nodeID string, message []b
 	case payloadLeave:
 		s.leaveCachedMessage[ipTS] = int(message[2])
 	case payloadSuspicious:
-		s.suspiciousCachedMessage[ipTS] = suspiciousMessage{Type: suspect, Inc: int(message[2])}
+		s.suspiciousCachedMessage[ipTS] = suspiciousMessage{Type: suspect, Inc: int(message[2]), TS: time.Now()}
 	}
 }
 
@@ -167,7 +168,9 @@ func (s *Server) getCachedMessages() [][]byte {
 			messages = append(messages, buf)
 		}
 		val, ok := s.suspiciousCachedMessage[k]
-		if ok {
+		if ok && time.Since(val.TS) >= s.config.Timeout {
+			delete(s.suspiciousCachedMessage, k)
+		} else if ok {
 			buf = append(buf, byte(messageJoin))
 			buf = append(buf, byte('_'))
 			buf = append(buf, []byte(k)...)
