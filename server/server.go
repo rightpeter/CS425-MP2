@@ -142,25 +142,38 @@ func (s *Server) pushCachedMessage(mType payloadType, nodeID string, message []b
 	}
 }
 
-func (s *Server) getCachedMessages() []string {
+func (s *Server) getCachedMessages() [][]byte {
 	// Get cached messages from s.suspiciousCachedMessage, s.joinCachedMessage, s.leaveCachedMessage
-	messages := make([]string, 0)
+	messages := make([][]byte, 0)
 
 	for k, v := range s.memList {
 		v, ok := s.joinCachedMessage[k]
+		buf := make([]byte, 0)
 		if ok {
-			m := fmt.Sprintf("%d_%s_%d", messageJoin, k, v)
-			messages = append(messages, m)
+			buf = append(buf, byte(messageJoin))
+			buf = append(buf, byte('_'))
+			buf = append(buf, []byte(k)...)
+			buf = append(buf, byte('_'))
+			buf = append(buf, byte(v))
+			messages = append(messages, buf)
 		}
 		v, ok = s.leaveCachedMessage[k]
 		if ok {
-			m := fmt.Sprintf("%d_%s_%d", messageJoin, k, v)
-			messages = append(messages, m)
+			buf = append(buf, byte(messageJoin))
+			buf = append(buf, byte('_'))
+			buf = append(buf, []byte(k)...)
+			buf = append(buf, byte('_'))
+			buf = append(buf, byte(v))
+			messages = append(messages, buf)
 		}
 		val, ok := s.suspiciousCachedMessage[k]
 		if ok {
-			m := fmt.Sprintf("%d_%s_%d", messageJoin, k, val.Inc)
-			messages = append(messages, m)
+			buf = append(buf, byte(messageJoin))
+			buf = append(buf, byte('_'))
+			buf = append(buf, []byte(k)...)
+			buf = append(buf, byte('_'))
+			buf = append(buf, byte(val.Inc))
+			messages = append(messages, buf)
 		}
 	}
 
@@ -216,7 +229,7 @@ func (s *Server) DealWithJoin(inpMsg []byte) error {
 	}
 	s.memList[string(ipTS)] = ni
 
-	s.pushCachedMessage(payloadJoin, string(ipTS), []byte(inpMsg), time.Millisecond*time.Duration(s.pingTimeout))
+	s.pushCachedMessage(payloadJoin, string(ipTS), []byte(inpMsg), time.Millisecond*time.Duration(s.config.TTL))
 	return nil
 }
 

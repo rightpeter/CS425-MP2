@@ -10,4 +10,5 @@ type NodeConfig struct {
 	IP                   string        `json:"ip"`
 	Port                 int           `json:"port"`
 	DisseminationTimeout time.Duration `json:"dissemination_timeout"`
+	TTL                  int           `json:"ttl"`
 }
