@@ -122,14 +122,14 @@ func (s *Server) suspectNode(nodeID string) {
 	if !ok {
 		s.suspectList[nodeID] = time.Now()
 	}
-	// What should be the message here? Should it be passed in the function parameter
-	s.pushCachedMessage(payloadSuspicious, nodeID, nil, time.Since(s.suspectList[nodeID]))
+	// Lu kindly set the TTL value correctly
+	ttl := 3
+	message := string(suspect) + "_" + nodeID + "_" + string(ttl)
+	s.pushCachedMessage(payloadSuspicious, nodeID, []byte(message), s.config.DisseminationTimeout)
 
 }
 
 func (s *Server) pushCachedMessage(mType payloadType, nodeID string, message []byte, timeout time.Duration) {
-	// Where should timeout be used?
-
 	ipTS := string(message[1])
 
 	switch mType {
@@ -137,39 +137,34 @@ func (s *Server) pushCachedMessage(mType payloadType, nodeID string, message []b
 		s.joinCachedMessage[ipTS] = int(message[2])
 	case payloadLeave:
 		s.leaveCachedMessage[ipTS] = int(message[2])
-	case payloadAlive:
-		// should there be an alive cache as well?
-		// Will need to fix
-		s.joinCachedMessage[ipTS] = int(message[2])
 	case payloadSuspicious:
 		s.suspiciousCachedMessage[ipTS] = suspiciousMessage{Type: suspect, Inc: int(message[2])}
 	}
 }
 
-func (s *Server) getCachedMessage(ipTS string) []map[string]int {
+func (s *Server) getCachedMessages() []string {
 	// Get cached messages from s.suspiciousCachedMessage, s.joinCachedMessage, s.leaveCachedMessage
-	message := make([]map[string]int, 0)
-	v, ok := s.joinCachedMessage[ipTS]
-	if ok {
-		m := make(map[string]int)
-		m[ipTS] = v
-		message = append(message, m)
-	}
-	v, ok = s.leaveCachedMessage[ipTS]
-	if ok {
-		m := make(map[string]int)
-		m[ipTS] = v
-		message = append(message, m)
-	}
-	val, ok := s.suspiciousCachedMessage[ipTS]
-	if ok {
-		m := make(map[string]int)
-		// THIS is wrong, need a fix
-		m[ipTS] = val.Inc
-		message = append(message, m)
+	messages := make([]string, 0)
+
+	for k, v := range s.memList {
+		v, ok := s.joinCachedMessage[k]
+		if ok {
+			m := fmt.Sprintf("%d_%s_%d", messageJoin, k, v)
+			messages = append(messages, m)
+		}
+		v, ok = s.leaveCachedMessage[k]
+		if ok {
+			m := fmt.Sprintf("%d_%s_%d", messageJoin, k, v)
+			messages = append(messages, m)
+		}
+		val, ok := s.suspiciousCachedMessage[k]
+		if ok {
+			m := fmt.Sprintf("%d_%s_%d", messageJoin, k, val.Inc)
+			messages = append(messages, m)
+		}
 	}
 
-	return message
+	return messages
 }
 
 // Ping ping/ack error detection
@@ -189,7 +184,7 @@ func (s *Server) Ping(nodeID string, ch chan bool) {
 	defer conn.Close()
 
 	var buf bytes.Buffer
-	messages := s.getCachedMessage()
+	messages := s.getCachedMessages()
 	buf.WriteString(fmt.Sprintf("%d:%s", messagePing, s.config.ID))
 	for _, message := range messages {
 		buf.WriteString(fmt.Sprintf(":%s", message))
@@ -211,7 +206,6 @@ func (s *Server) Ping(nodeID string, ch chan bool) {
 
 // DealWithJoin will deal with new joins in our network
 func (s *Server) DealWithJoin(inpMsg []byte) error {
-	// Assuming that inpMsg is in the form 2:ip_ts
 	ipTS := bytes.Split(inpMsg, []byte(":"))[1]
 
 	ni := nodeInfo{
@@ -223,7 +217,6 @@ func (s *Server) DealWithJoin(inpMsg []byte) error {
 	s.memList[string(ipTS)] = ni
 
 	s.pushCachedMessage(payloadJoin, string(ipTS), []byte(inpMsg), time.Millisecond*time.Duration(s.pingTimeout))
-
 	return nil
 }
 
