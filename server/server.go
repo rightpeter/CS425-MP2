@@ -114,16 +114,62 @@ func (s *Server) checkAvailability() {
 }
 
 func (s *Server) suspectNode(nodeID string) {
-	log.Fatalln("suspectNode TODO!!!")
+	nodeInfo := s.memList[nodeID]
+	nodeInfo.Inc++
+	s.memList[nodeID] = nodeInfo
+
+	_, ok := s.suspectList[nodeID]
+	if !ok {
+		s.suspectList[nodeID] = time.Now()
+	}
+	// What should be the message here? Should it be passed in the function parameter
+	s.pushCachedMessage(payloadSuspicious, nodeID, nil, time.Since(s.suspectList[nodeID]))
+
 }
 
 func (s *Server) pushCachedMessage(mType payloadType, nodeID string, message []byte, timeout time.Duration) {
-	log.Fatalln("pushCachedMessage TODO!!!")
+	// Where should timeout be used?
+
+	ipTS := string(message[1])
+
+	switch mType {
+	case payloadJoin:
+		s.joinCachedMessage[ipTS] = int(message[2])
+	case payloadLeave:
+		s.leaveCachedMessage[ipTS] = int(message[2])
+	case payloadAlive:
+		// should there be an alive cache as well?
+		// Will need to fix
+		s.joinCachedMessage[ipTS] = int(message[2])
+	case payloadSuspicious:
+		s.suspiciousCachedMessage[ipTS] = suspiciousMessage{Type: suspect, Inc: int(message[2])}
+	}
 }
 
-func (s *Server) getCachedMessage() []string {
+func (s *Server) getCachedMessage(ipTS string) []map[string]int {
 	// Get cached messages from s.suspiciousCachedMessage, s.joinCachedMessage, s.leaveCachedMessage
-	return []string{"getCachedMessage TODO!!!"}
+	message := make([]map[string]int, 0)
+	v, ok := s.joinCachedMessage[ipTS]
+	if ok {
+		m := make(map[string]int)
+		m[ipTS] = v
+		message = append(message, m)
+	}
+	v, ok = s.leaveCachedMessage[ipTS]
+	if ok {
+		m := make(map[string]int)
+		m[ipTS] = v
+		message = append(message, m)
+	}
+	val, ok := s.suspiciousCachedMessage[ipTS]
+	if ok {
+		m := make(map[string]int)
+		// THIS is wrong, need a fix
+		m[ipTS] = val.Inc
+		message = append(message, m)
+	}
+
+	return message
 }
 
 // Ping ping/ack error detection
@@ -168,18 +214,15 @@ func (s *Server) DealWithJoin(inpMsg []byte) error {
 	// Assuming that inpMsg is in the form 2:ip_ts
 	ipTS := bytes.Split(inpMsg, []byte(":"))[1]
 
-	// TODO: need to generate id_ts
-	nodeID := "id-ts"
-
 	ni := nodeInfo{
-		IP:         strings.Split(ipTS, ":")[0],
-		Port:       8081,
+		IP:         string(bytes.Split(ipTS, []byte("_"))[0]),
+		Port:       s.config.Port,
 		Inc:        0,
 		Suspecious: alive,
 	}
-	s.memList[nodeID] = ni
+	s.memList[string(ipTS)] = ni
 
-	s.pushCachedMessage(payloadJoin, nodeID, []byte(inpMsg), time.Millisecond*time.Duration(s.pingTimeout))
+	s.pushCachedMessage(payloadJoin, string(ipTS), []byte(inpMsg), time.Millisecond*time.Duration(s.pingTimeout))
 
 	return nil
 }
@@ -189,22 +232,16 @@ func (s *Server) DealWithJoin(inpMsg []byte) error {
 func (s *Server) DealWithMessage(n int, addr net.Addr, buf []byte) {
 	fmt.Println("Received ", string(buf[0:n]), " from ", addr)
 
-	bufList = bytes.Split(buf, []byte(':'))
+	bufList := bytes.Split(buf, []byte(":"))
 	switch bufList[0] {
 	case messageAck:
 
 	case messagePing:
 	case messageJoin:
-		s.DealWithJoin(bytes.Split(buf[2:]))
+		s.DealWithJoin(buf[2:])
 	}
 
 	inpMsg := string(buf[0:n])
-
-	if strings.Split(inpMsg, ":")[0] == "2" {
-		_ = s.DealWithJoin(inpMsg)
-		// Return memlist to ip_ts
-		// s.ServerConn.WriteTo(s.memList, addr)
-	}
 
 	s.ServerConn.WriteTo(buf, addr)
 }
