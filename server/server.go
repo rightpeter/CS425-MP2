@@ -299,7 +299,7 @@ func (s *Server) JoinToGroup() error {
 	}
 	log.Printf("JoinToGroup: Write buf: %s\n", buf)
 
-	buf = []byte{}
+	buf = make([]byte, 4096*4096)
 	_, _, err = conn.ReadFrom(buf)
 	log.Printf("JoinToGroup: ReadFrom buf: %s", buf)
 	if err != nil {
