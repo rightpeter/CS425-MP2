@@ -1,15 +1,13 @@
 package model
 
-import (
-	"time"
-)
-
 // NodeConfig Structure of node config
 type NodeConfig struct {
-	ID                   string        `json:"id"`
-	IP                   string        `json:"ip"`
-	Port                 int           `json:"port"`
-	DisseminationTimeout time.Duration `json:"dissemination_timeout"`
-	Timeout              time.Duration `json:"timeout"`
-	TTL                  int           `json:"ttl"`
+	IP                   string `json:"ip"`
+	Port                 int    `json:"port"`
+	TTL                  uint8  `json:"ttl"`
+	LogPath              string `json:"log_path"`
+	PeriodTime           int    `json:"period_time"`           // Millisecond
+	PingTimeout          int    `json:"ping_timeout"`          // Millisecend
+	DisseminationTimeout int    `json:"dissemination_timeout"` // Millisecend
+	FailTimeout          int    `json:"fail_timeout"`          // Millisecond
 }

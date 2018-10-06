@@ -1,6 +1,6 @@
 FROM golang:alpine
 
-WORKDIR /go/src/app
+WORKDIR /go/src/CS425/CS425-MP2
 
 COPY . .
 
