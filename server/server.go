@@ -360,6 +360,7 @@ func (s *Server) getCachedMessages() [][]byte {
 			messages = append(messages, buf)
 		}
 	}
+	log.Printf("getCachedMessages messages: %v\n", messages)
 
 	return messages
 }
@@ -399,6 +400,7 @@ func (s *Server) Ping(nodeID string, ch chan bool) {
 	if bufList[0][0] == byte(messageAck) {
 		s.DealWithPayloads(bufList[2:])
 	}
+	ch <- true
 }
 
 // DealWithJoin will deal with new joins in our network
@@ -474,20 +476,18 @@ func (s *Server) FailureDetection() error {
 		}
 		nodeID := s.pingList[s.pingIter]
 		ch := make(chan bool)
-		s.Ping(nodeID, ch)
+		go s.Ping(nodeID, ch)
 
 		select {
 		case res := <-ch:
-			if res {
-				s.pingIter++
-			} else {
+			if !res {
 				s.suspectNode(nodeID, s.failTimeout, s.cachedTimeout)
 			}
 		case <-time.After(time.Duration(s.config.PingTimeout) * time.Millisecond):
 			s.suspectNode(nodeID, s.failTimeout, s.cachedTimeout)
 		}
-
 		s.pingIter++
+
 		if s.pingIter == 0 {
 			s.generatePingList()
 		}
@@ -534,7 +534,7 @@ func (s *Server) ServerLoop() {
 
 	buf := make([]byte, 1024)
 	for {
-		n, addr, err := s.ServerConn.ReadFromUDP(buf)
+		_, addr, err := s.ServerConn.ReadFromUDP(buf)
 		if err != nil {
 			fmt.Println("Error: ", err)
 		}
