@@ -414,13 +414,12 @@ func (s *Server) Ping(nodeID string, ch chan bool) {
 	payloads := s.getCachedMessages()
 	replyBuf := s.generateBuffer(messagePing, payloads)
 
-	replyBuf = append(replyBuf, []byte("asdfadsfasfdasf")...)
+	log.Printf("in Ping Write replyBuf: %s\n", replyBuf)
 	_, err = conn.Write(replyBuf)
 	if err != nil {
 		ch <- false
 		return
 	}
-	log.Printf("in Ping Write replyBuf: %s\n", replyBuf)
 
 	buf := []byte{}
 	_, _, err = conn.ReadFrom(buf)
@@ -428,9 +427,15 @@ func (s *Server) Ping(nodeID string, ch chan bool) {
 		ch <- false
 		return
 	}
+	// buf: 0:s.ID:0_ip-ts_2:1_ip-ts_1:2_ip-ts_234:3_ip-ts_223
+	// bufList[0]: [messageType]
+	// bufList[1]: ip-ts
+	// bufList[2:]: payload messages
 	bufList := bytes.Split(buf, []byte(":"))
 	if bufList[0][0] == byte(messageAck) {
-		s.DealWithPayloads(bufList[2:])
+		if len(bufList) > 2 {
+			s.DealWithPayloads(bufList[2:])
+		}
 	}
 	log.Printf("ping %s successfully\n", nodeID)
 	ch <- true
@@ -586,9 +591,13 @@ func (s *Server) ServerLoop() {
 		// bufList[2:]: payload messages
 		switch messageType(bufList[0][0]) {
 		case messageAck:
-			s.DealWithPayloads(bufList[2:])
+			if len(bufList) > 2 {
+				s.DealWithPayloads(bufList[2:])
+			}
 		case messagePing:
-			s.DealWithPayloads(bufList[2:])
+			if len(bufList) > 2 {
+				s.DealWithPayloads(bufList[2:])
+			}
 			payloads := s.getCachedMessages()
 			replyBuf := s.generateBuffer(messageAck, payloads)
 			log.Printf("in messagePing WriteTo replyBuf: %s\n", replyBuf)
