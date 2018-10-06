@@ -297,7 +297,7 @@ func (s *Server) JoinToGroup() error {
 	if err != nil {
 		return errors.New("unable to write to udp conn")
 	}
-	log.Printf("in JoinToGroup Write buf: %s\n", buf)
+	log.Printf("JoinToGroup: Write buf: %s\n", buf)
 
 	buf = []byte{}
 	_, _, err = conn.ReadFromUDP(buf)
@@ -305,6 +305,7 @@ func (s *Server) JoinToGroup() error {
 		return errors.New("unable to read from udp conn")
 	}
 
+	log.Printf("JoinToGroup: ReadFromUDP buf: %s", buf)
 	// buf: messageMemList:s.ID:ip-ts_inc:ip-ts_inc:...
 	bufList := bytes.Split(buf, []byte(":"))
 	if len(bufList[0]) > 0 && bufList[0][0] == byte(messageShowMemList) {
