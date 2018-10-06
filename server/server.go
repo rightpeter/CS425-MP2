@@ -39,10 +39,11 @@ const (
 type messageType uint8
 
 const (
-	messagePing    messageType = 0
-	messageAck     messageType = 1
-	messageJoin    messageType = 2
-	messageMemList messageType = 3
+	messagePing        messageType = 0
+	messageAck         messageType = 1
+	messageJoin        messageType = 2
+	messageMemList     messageType = 3
+	messageShowMemList messageType = 4
 )
 
 type suspiciousMessage struct {
@@ -223,6 +224,9 @@ func (s *Server) newNode(nodeID string, inc uint8) {
 func (s *Server) deleteNode(nodeID string) {
 	if _, ok := s.memList[nodeID]; ok {
 		delete(s.memList, nodeID)
+		s.generateSortedMemList()
+		s.generatePingList()
+		s.pushSuspiciousCachedMessage(suspiciousFail, nodeID, s.getIncFromCachedMessages(nodeID), s.cachedTimeout)
 	}
 }
 
@@ -239,13 +243,48 @@ func (s *Server) failNode(nodeID string, timeout time.Duration) {
 	time.Sleep(timeout)
 	if _, ok := s.suspectList[nodeID]; !ok {
 		delete(s.suspectList, nodeID)
-		if _, ok := s.memList[nodeID]; !ok {
-			delete(s.memList, nodeID)
-			s.generateSortedMemList()
-			s.generatePingList()
-			s.pushSuspiciousCachedMessage(suspiciousFail, nodeID, s.getIncFromCachedMessages(nodeID), s.cachedTimeout)
-		}
+		s.deleteNode(nodeID)
 	}
+}
+
+// JoinToGroup join to group
+func (s *Server) JoinToGroup() error {
+	// introducer don't need to join to group
+	if s.config.IP == s.config.IntroducerIP {
+		return nil
+	}
+
+	joinAddr, err := net.ResolveUDPAddr("udp", fmt.Sprintf("%s:%d", s.config.IntroducerIP, s.config.Port))
+	if err != nil {
+		return errors.New("unable to resolve udp addr")
+	}
+
+	conn, err := net.DialUDP("udp", nil, joinAddr)
+	if err != nil {
+		return errors.New("unable to dial udp")
+	}
+
+	defer conn.Close()
+
+	buf := s.generateJoinBuffer()
+	_, err = conn.Write(buf)
+	if err != nil {
+		return errors.New("unable to write to udp conn")
+	}
+
+	buf = []byte{}
+	_, _, err = conn.ReadFromUDP(buf)
+	if err != nil {
+		return errors.New("unable to read from udp conn")
+	}
+
+	// buf: messageMemList:s.ID:ip-ts_inc:ip-ts_inc:...
+	bufList := bytes.Split(buf, []byte(":"))
+	if bufList[0][0] == byte(messageShowMemList) {
+		// bufList = [[messageShowMemList], [s.ID], [ip-ts_inc], [ip-ts_inc], ...]
+		s.DealWithMemList(bufList[2:])
+	}
+	return nil
 }
 
 func (s *Server) pushSuspiciousCachedMessage(sStatus suspiciousStatus, nodeID string, inc uint8, timeout time.Duration) {
@@ -333,7 +372,7 @@ func (s *Server) Ping(nodeID string, ch chan bool) {
 	defer conn.Close()
 
 	payloads := s.getCachedMessages()
-	replyBuf := s.generateReplyBuffer(messagePing, payloads)
+	replyBuf := s.generateBuffer(messagePing, payloads)
 
 	_, err = conn.Write(replyBuf)
 	if err != nil {
@@ -354,6 +393,7 @@ func (s *Server) Ping(nodeID string, ch chan bool) {
 }
 
 // DealWithJoin will deal with new joins in our network
+// inpMsg: [ip-ts]
 func (s *Server) DealWithJoin(inpMsg []byte) {
 	nodeID := string(inpMsg)
 
@@ -394,15 +434,19 @@ func (s *Server) DealWithPayloads(payloads [][]byte) {
 				s.memList[nodeID] = inc
 			}
 			s.pushSuspiciousCachedMessage(suspiciousAlive, nodeID, inc, s.cachedTimeout)
+		case payloadFail:
+			s.deleteNode(nodeID)
 		}
 
 	}
 }
 
 // DealWithMemList deal with messages contains memList
+// bufList = [[ip-ts_inc], [ip-ts_inc], ...]
 func (s *Server) DealWithMemList(bufList [][]byte) {
 	for _, buf := range bufList {
 		message := bytes.Split(buf, []byte("_"))
+		// message = [[ip-ts], [inc]]
 		nodeID := string(message[0])
 		inc := uint8(message[1][0])
 		s.newNode(nodeID, inc)
@@ -439,11 +483,11 @@ func (s *Server) FailureDetection() error {
 	}
 }
 
-// buf: 0:ip-ts:0_ip-ts_2:1_ip-ts_1:2_ip-ts_234:3_ip-ts_223
-func (s *Server) generateReplyBuffer(mType messageType, payloads [][]byte) []byte {
-	replyBuf := []byte{byte(mType)}              // messagePing
-	replyBuf = append(replyBuf, ':')             // messagePing:
-	replyBuf = append(replyBuf, []byte(s.ID)...) // messagePing:ip-ts
+// buf: 0:s.ID:0_ip-ts_2:1_ip-ts_1:2_ip-ts_234:3_ip-ts_223
+func (s *Server) generateBuffer(mType messageType, payloads [][]byte) []byte {
+	replyBuf := []byte{byte(mType)}              // messageType
+	replyBuf = append(replyBuf, ':')             // messageType:
+	replyBuf = append(replyBuf, []byte(s.ID)...) // messageType:ip-ts
 	for _, payload := range payloads {
 		//payload: 0_ip-ts_342
 		replyBuf = append(replyBuf, ':')
@@ -452,17 +496,21 @@ func (s *Server) generateReplyBuffer(mType messageType, payloads [][]byte) []byt
 	return replyBuf
 }
 
-// buf: 3:ip-ts:ip-ts:ip-ts
-func (s *Server) generateJoinReplyBuffer() []byte {
-	replyBuf := []byte{byte(messageMemList)} // messageMemList
+// buf: messageJoin:s.ID
+func (s *Server) generateJoinBuffer() []byte {
+	return s.generateBuffer(messageJoin, [][]byte{})
+}
+
+// buf: messageMemList:s.ID:ip-ts_inc:ip-ts_inc:ip-ts_inc
+func (s *Server) generateMemListBuffer() []byte {
+	payloads := [][]byte{}
 
 	for _, nodeID := range s.sortedMemList {
-		replyBuf = append(replyBuf, ':')
-		replyBuf = append(replyBuf, []byte(nodeID)...)
-		replyBuf = append(replyBuf, '_')
-		replyBuf = append(replyBuf, byte(s.memList[nodeID]))
+		payload := bytes.NewBufferString(fmt.Sprintf(":%s_%d", nodeID, s.memList[nodeID]))
+		payloads = append(payloads, payload.Bytes())
 	}
-	return replyBuf
+
+	return s.generateBuffer(messageMemList, payloads)
 }
 
 // ServerLoop main server loop: listen on s.config.port for incoming udp package
@@ -493,16 +541,21 @@ func (s *Server) ServerLoop() {
 		case messagePing:
 			s.DealWithPayloads(bufList[2:])
 			payloads := s.getCachedMessages()
-			replyBuf := s.generateReplyBuffer(messageAck, payloads)
+			replyBuf := s.generateBuffer(messageAck, payloads)
 			s.ServerConn.WriteTo(replyBuf, addr)
 		case messageJoin:
+			// buf: messageJoin:ip-ts
+			// bufList: [[messageJoin], [ip-ts]]
 			s.DealWithJoin(bufList[1])
-			replyBuf := s.generateJoinReplyBuffer()
+			replyBuf := s.generateMemListBuffer()
 			s.ServerConn.WriteTo(replyBuf, addr)
 		case messageMemList:
 			// bufList[0]: [messageMemList]
 			// bufList[1:]: [[ip-ts], [ip-ts], ...]
 			s.DealWithMemList(bufList[1:])
+		case messageShowMemList:
+			replyBuf := s.generateMemListBuffer()
+			s.ServerConn.WriteTo(replyBuf, addr)
 		}
 	}
 }

@@ -10,4 +10,5 @@ type NodeConfig struct {
 	PingTimeout          int    `json:"ping_timeout"`          // Millisecend
 	DisseminationTimeout int    `json:"dissemination_timeout"` // Millisecend
 	FailTimeout          int    `json:"fail_timeout"`          // Millisecond
+	IntroducerIP         string `json:"introducer_ip"`
 }
