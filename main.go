@@ -1,9 +1,11 @@
 package main
 
 import (
+	"CS425/CS425-MP2/server"
+	"flag"
+	"io/ioutil"
 	"log"
-	"net"
-	"server"
+	"os"
 )
 
 // This function will register and initiate server
@@ -22,15 +24,20 @@ func main() {
 	}
 
 	// Class for server
-	s := newServer()
-	s.loadConfigFromJSON(configFile)
+	s := server.NewServer(configFile)
 
-	s.setIP(*IP)
-	s.setPort(*port)
-	s.setFilePath(server.getFilePath())
+	s.SetIP(*IP)
+	s.SetPort(*port)
 
-	fmt.Printf("Starting server on IP: %s and port: %d", *IP, *port)
+	f, err := os.OpenFile(s.GetConfigPath(), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	if err != nil {
+		log.Fatalf("error opening file: %v", err)
+	}
+	defer f.Close()
 
-	go server.FailureDetection()
-	go server.ServerLoop()
+	log.SetOutput(f)
+	log.Printf("Starting server on IP: %s and port: %d", *IP, *port)
+
+	go s.FailureDetection()
+	s.ServerLoop()
 }

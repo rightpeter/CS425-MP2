@@ -1,0 +1,9 @@
+{
+    "ip": "127.0.0.1",
+    "port": 8081,
+    "ping_timeout": 200,
+    "dissemination_timeout": 200,
+    "fail_timeout": 200,
+    "ttl": 3,
+    "log_path": "/tmp/mp2.log"
+}
