@@ -521,7 +521,7 @@ func (s *Server) generateMemListBuffer() []byte {
 	payloads := [][]byte{}
 
 	for _, nodeID := range s.sortedMemList {
-		payload := bytes.NewBufferString(fmt.Sprintf(":%s_%d", nodeID, s.memList[nodeID]))
+		payload := bytes.NewBufferString(fmt.Sprintf("%s_%d", nodeID, s.memList[nodeID]))
 		payloads = append(payloads, payload.Bytes())
 	}
 
