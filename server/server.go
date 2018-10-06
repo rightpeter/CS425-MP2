@@ -261,6 +261,7 @@ func (s *Server) suspectNode(nodeID string, failTimeout time.Duration, cachedTim
 }
 
 func (s *Server) failNode(nodeID string, timeout time.Duration) {
+	log.Printf("it's in failNode, nodeID: %s", nodeID)
 	time.Sleep(timeout)
 	if _, ok := s.suspectList[nodeID]; !ok {
 		delete(s.suspectList, nodeID)
