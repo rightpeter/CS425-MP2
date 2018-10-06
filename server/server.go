@@ -329,7 +329,7 @@ func (s *Server) getCachedMessages() [][]byte {
 		buf = append(buf, []byte(k)...)
 		buf = append(buf, byte('_'))
 		buf = append(buf, byte(v))
-		log.Printf(" buf: %v\n", buf)
+		log.Printf(" buf: %v\n", string(buf))
 		messages = append(messages, buf)
 	}
 
