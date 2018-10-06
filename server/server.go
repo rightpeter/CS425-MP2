@@ -199,10 +199,13 @@ func (s *Server) generateSortedMemList() {
 
 func (s *Server) generatePingList() error {
 	i := s.findIndexInSortedMemList(s.ID)
+	log.Printf("in generatePintList, s.sortedMemList: %v, i: %d\n", s.sortedMemList, i)
 	if i >= 4 {
 		s.pingList = []string{}
 		s.pingIter = 0
 	} else if i == -1 {
+		s.pingList = []string{}
+		s.pingIter = 0
 		return errors.New("self is not in s.sortedMemList")
 	} else {
 		coreNodeList := []string{}
