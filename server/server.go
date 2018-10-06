@@ -616,7 +616,7 @@ func (s *Server) ServerLoop() {
 			replyBuf := s.generateMemListBuffer()
 			log.Printf("ServerLoop: messageJoin WriteTo replyBuf: %s\n", replyBuf)
 			s.ServerConn.WriteTo(replyBuf, addr)
-			log.Printf("ServerLoop: after messageJoin WriteTo replyBuf: %s\n", replyBuf)
+			log.Printf("ServerLoop: after messageJoin WriteTo addr: %v, replyBuf: %s\n", addr, replyBuf)
 		case messageMemList:
 			// bufList[0]: [messageMemList]
 			// bufList[1:]: [[ip-ts], [ip-ts], ...]
