@@ -280,6 +280,7 @@ func (s *Server) JoinToGroup() error {
 	if err != nil {
 		return errors.New("unable to write to udp conn")
 	}
+	log.Printf("in JoinToGroup Write buf: %s\n", buf)
 
 	buf = []byte{}
 	_, _, err = conn.ReadFromUDP(buf)
@@ -390,6 +391,7 @@ func (s *Server) Ping(nodeID string, ch chan bool) {
 		ch <- false
 		return
 	}
+	log.Printf("in Ping Write replyBuf: %s\n", replyBuf)
 
 	buf := []byte{}
 	_, _, err = conn.ReadFrom(buf)
@@ -556,12 +558,14 @@ func (s *Server) ServerLoop() {
 			s.DealWithPayloads(bufList[2:])
 			payloads := s.getCachedMessages()
 			replyBuf := s.generateBuffer(messageAck, payloads)
+			log.Printf("in messagePing WriteTo replyBuf: %s\n", replyBuf)
 			s.ServerConn.WriteTo(replyBuf, addr)
 		case messageJoin:
 			// buf: messageJoin:ip-ts
 			// bufList: [[messageJoin], [ip-ts]]
 			s.DealWithJoin(bufList[1])
 			replyBuf := s.generateMemListBuffer()
+			log.Printf("in messageJoin WriteTo replyBuf: %s\n", replyBuf)
 			s.ServerConn.WriteTo(replyBuf, addr)
 		case messageMemList:
 			// bufList[0]: [messageMemList]
