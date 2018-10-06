@@ -545,7 +545,7 @@ func (s *Server) ServerLoop() {
 			continue
 		}
 		bufList := bytes.Split(buf, []byte(":"))
-		log.Printf("bufList: messageType: %d, bufList[1]: %s, buf: %v\n", bufList[0], string(bufList[1]), buf)
+		log.Printf("bufList: messageType: %d, bufList[1]: %s, buf: %v\n", bufList[0], string(bufList[1]), string(buf))
 		// bufList[0]: [messageType]
 		// bufList[1]: ip-ts
 		// bufList[2:]: payload messages
