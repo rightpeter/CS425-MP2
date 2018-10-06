@@ -323,11 +323,13 @@ func (s *Server) getCachedMessages() [][]byte {
 	messages := make([][]byte, 0)
 
 	for k, v := range s.joinCachedMessage {
+		log.Printf("joinCachedMessages nodeID: %s, inc: %d", k, v)
 		buf := []byte{byte(payloadJoin)}
 		buf = append(buf, byte('_'))
 		buf = append(buf, []byte(k)...)
 		buf = append(buf, byte('_'))
 		buf = append(buf, byte(v))
+		log.Printf(" buf: %v\n", buf)
 		messages = append(messages, buf)
 	}
 
@@ -360,7 +362,6 @@ func (s *Server) getCachedMessages() [][]byte {
 			messages = append(messages, buf)
 		}
 	}
-	log.Printf("getCachedMessages messages: %v\n", messages)
 
 	return messages
 }
