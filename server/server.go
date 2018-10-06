@@ -427,6 +427,7 @@ func (s *Server) Ping(nodeID string, ch chan bool) {
 		ch <- false
 		return
 	}
+	log.Printf("in Ping, ReadFrom buf: %s", buf)
 	// buf: 0:s.ID:0_ip-ts_2:1_ip-ts_1:2_ip-ts_234:3_ip-ts_223
 	// bufList[0]: [messageType]
 	// bufList[1]: ip-ts
