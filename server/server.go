@@ -422,7 +422,7 @@ func (s *Server) Ping(nodeID string, ch chan bool) {
 	}
 
 	buf := []byte{}
-	n, _, err = conn.ReadFrom(buf)
+	n, _, err := conn.ReadFrom(buf)
 	if err != nil {
 		ch <- false
 		return
