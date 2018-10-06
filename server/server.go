@@ -537,7 +537,7 @@ func (s *Server) ServerLoop() {
 	}
 	defer s.ServerConn.Close()
 
-	buf := make([]byte, 4096)
+	buf := make([]byte, 4096*4096)
 	for {
 		n, addr, err := s.ServerConn.ReadFromUDP(buf)
 		if err != nil {
