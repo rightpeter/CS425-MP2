@@ -193,7 +193,12 @@ func (s *Server) generatePingList() error {
 	} else if i == -1 {
 		return errors.New("self is not in s.sortedMemList")
 	} else {
-		coreNodeList := s.sortedMemList[0:4]
+		coreNodeList := []string{}
+		if len(s.sortedMemList) < 4 {
+			coreNodeList = s.sortedMemList
+		} else {
+			coreNodeList = s.sortedMemList[0:4]
+		}
 		leafNodeList := []string{}
 
 		for j := 4; j < len(s.sortedMemList); j++ {
@@ -214,6 +219,8 @@ func (s *Server) newNode(nodeID string, inc uint8) {
 		s.memList[nodeID] = inc
 		s.generateSortedMemList()
 		s.generatePingList()
+		log.Printf("new node: %s, join the group\n", nodeID)
+		log.Printf("memList: %s\n", s.sortedMemList)
 	} else {
 		if inc > s.memList[nodeID] {
 			s.memList[nodeID] = inc
@@ -227,6 +234,8 @@ func (s *Server) deleteNode(nodeID string) {
 		s.generateSortedMemList()
 		s.generatePingList()
 		s.pushSuspiciousCachedMessage(suspiciousFail, nodeID, s.getIncFromCachedMessages(nodeID), s.cachedTimeout)
+		log.Printf("node: %s is deleted from the group\n", nodeID)
+		log.Printf("memList: %s\n", s.sortedMemList)
 	}
 }
 
