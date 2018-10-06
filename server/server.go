@@ -247,7 +247,7 @@ func (s *Server) deleteNode(nodeID string) {
 		s.generatePingList()
 		s.pushSuspiciousCachedMessage(suspiciousFail, nodeID, s.getIncFromCachedMessages(nodeID), s.cachedTimeout)
 		log.Printf("node: %s is deleted from the group\n", nodeID)
-		log.Printf("memList: %s\n", s.sortedMemList)
+		log.Printf("memList: %v, sortedMemList: %v, pingList: %v\n", s.memList, s.sortedMemList, s.pingList)
 	}
 }
 
