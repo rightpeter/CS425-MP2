@@ -266,7 +266,7 @@ func (s *Server) failNode(nodeID string, timeout time.Duration) {
 	if _, ok := s.suspectList[nodeID]; ok {
 		delete(s.suspectList, nodeID)
 		s.deleteNode(nodeID)
-		log.Printf("222222 failNode, memList: %v, suspectList: %v", s.memList, s.suspectList)
+		log.Printf("222222 failNode, memList: %v, sortedMemList: %v, suspectList: %v", s.memList, s.sortedMemList, s.suspectList)
 	}
 }
 
