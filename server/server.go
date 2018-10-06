@@ -386,7 +386,7 @@ func (s *Server) Ping(nodeID string, ch chan bool) {
 	payloads := s.getCachedMessages()
 	replyBuf := s.generateBuffer(messagePing, payloads)
 
-	replyBuf = append(replyBuf, []byte{"asdfadsfasfdasf"})
+	replyBuf = append(replyBuf, []byte("asdfadsfasfdasf")...)
 	_, err = conn.Write(replyBuf)
 	if err != nil {
 		ch <- false
