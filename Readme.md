@@ -14,3 +14,7 @@ The default output is /tmp/mp2.log, use:
 	$ tail -f /tmp/mp2.log
 
 to monitor the log.
+
+## Introducer
+
+VM3 is the introducer
