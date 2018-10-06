@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"time"
 )
 
 // This function will register and initiate server
@@ -18,9 +19,9 @@ func main() {
 	flag.Parse()
 
 	// load config file
-	configFile, e := ioutil.ReadFile(*configFilePath)
-	if e != nil {
-		log.Fatalf("File error: %v\n", e)
+	configFile, err := ioutil.ReadFile(*configFilePath)
+	if err != nil {
+		log.Fatalf("File error: %v\n", err)
 	}
 
 	// Class for server
@@ -36,8 +37,20 @@ func main() {
 	defer f.Close()
 
 	log.SetOutput(f)
-	log.Printf("Starting server on IP: %s and port: %d", *IP, *port)
+
+	for {
+		err = s.JoinToGroup()
+		if err != nil {
+			log.Printf("join to group failed: %s\n", err.Error())
+			log.Printf("try to join to group 5 seconds later...")
+			time.Sleep(5 * time.Second)
+			continue
+		}
+		log.Printf("join to group successfully")
+		break
+	}
 
 	go s.FailureDetection()
+	log.Printf("Starting server on IP: %s and port: %d", *IP, *port)
 	s.ServerLoop()
 }
