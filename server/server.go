@@ -414,6 +414,9 @@ func (s *Server) DealWithJoin(inpMsg []byte) {
 // payloads: [[0_ip-ts_2], [1_ip-ts_1], [2_ip-ts_234], [3_ip-ts_223]]
 func (s *Server) DealWithPayloads(payloads [][]byte) {
 	for _, payload := range payloads {
+		if len(payload) == 0 {
+			continue
+		}
 		message := bytes.Split(payload, []byte("_"))
 		// message = [[0], []byte("ip-ts"), [2]]
 		nodeID := string(message[1])
@@ -446,7 +449,6 @@ func (s *Server) DealWithPayloads(payloads [][]byte) {
 		case payloadFail:
 			s.deleteNode(nodeID)
 		}
-
 	}
 }
 
@@ -537,10 +539,14 @@ func (s *Server) ServerLoop() {
 			fmt.Println("Error: ", err)
 		}
 
-		// buf: 0:ip-ts:0_ip-ts_2:1_ip-ts_1:2_ip-ts_234:3_ip-ts_223
-		fmt.Println("Received ", string(buf[0:n]), " from ", addr)
-
+		if len(buf) == 0 {
+			continue
+		}
 		bufList := bytes.Split(buf, []byte(":"))
+		log.Printf("bufList: messageType: %d, bufList[1]: %s", bufList[0], string(bufList[1]))
+		if len(bufList) > 2 {
+			log.Printf(" payloads: %s\n", bufList[2:])
+		}
 		// bufList[0]: [messageType]
 		// bufList[1]: ip-ts
 		// bufList[2:]: payload messages
