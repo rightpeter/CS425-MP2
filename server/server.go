@@ -280,7 +280,8 @@ func (s *Server) JoinToGroup() error {
 
 	// buf: messageMemList:s.ID:ip-ts_inc:ip-ts_inc:...
 	bufList := bytes.Split(buf, []byte(":"))
-	if bufList[0][0] == byte(messageShowMemList) {
+	log.Printf("bufList: %v\n", bufList)
+	if len(bufList[0]) > 0 && bufList[0][0] == byte(messageShowMemList) {
 		// bufList = [[messageShowMemList], [s.ID], [ip-ts_inc], [ip-ts_inc], ...]
 		s.DealWithMemList(bufList[2:])
 	}
