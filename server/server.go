@@ -505,6 +505,7 @@ func (s *Server) generateBuffer(mType messageType, payloads [][]byte) []byte {
 		replyBuf = append(replyBuf, ':')
 		replyBuf = append(replyBuf, payload...)
 	}
+	log.Printf("generateBuffer replyBuf: %v\n", replyBuf)
 	return replyBuf
 }
 
