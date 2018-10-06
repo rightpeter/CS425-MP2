@@ -505,8 +505,7 @@ func (s *Server) generateBuffer(mType messageType, payloads [][]byte) []byte {
 		replyBuf = append(replyBuf, ':')
 		replyBuf = append(replyBuf, payload...)
 	}
-	log.Printf("in generateBuffer messageType: %d, ", mType)
-	log.Printf("replyBuf: %v\n", string(replyBuf))
+	log.Printf("in generateBuffer messageType: %d, replyBuf: %v\n", mType, string(replyBuf))
 	return replyBuf
 }
 
@@ -546,10 +545,7 @@ func (s *Server) ServerLoop() {
 			continue
 		}
 		bufList := bytes.Split(buf, []byte(":"))
-		log.Printf("bufList: messageType: %d, bufList[1]: %s", bufList[0], string(bufList[1]))
-		if len(bufList) > 2 {
-			log.Printf(" payloads: %s\n", bufList[2:])
-		}
+		log.Printf("bufList: messageType: %d, bufList[1]: %s, buf: %v\n", bufList[0], string(bufList[1]), buf)
 		// bufList[0]: [messageType]
 		// bufList[1]: ip-ts
 		// bufList[2:]: payload messages
