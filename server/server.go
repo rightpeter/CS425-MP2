@@ -539,7 +539,7 @@ func (s *Server) ServerLoop() {
 
 	buf := make([]byte, 4096)
 	for {
-		_, addr, err := s.ServerConn.ReadFromUDP(buf)
+		n, addr, err := s.ServerConn.ReadFromUDP(buf)
 		if err != nil {
 			fmt.Println("Error: ", err)
 		}
@@ -548,7 +548,7 @@ func (s *Server) ServerLoop() {
 			continue
 		}
 		bufList := bytes.Split(buf, []byte(":"))
-		log.Printf("bufList: messageType: %d, bufList[1]: %s, buf: %v\n", bufList[0], string(bufList[1]), string(buf))
+		log.Printf("bufList: n: %d, buf size: %d, messageType: %d, bufList[1]: %s, buf: %v\n", n, len(buf), bufList[0], string(bufList[1]), string(buf))
 		// bufList[0]: [messageType]
 		// bufList[1]: ip-ts
 		// bufList[2:]: payload messages
