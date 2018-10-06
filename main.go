@@ -13,10 +13,6 @@ import (
 func main() {
 	// parse argument
 	configFilePath := flag.String("c", "./config.json", "Config file path")
-	port := flag.Int("p", 8080, "Port number")
-	IP := flag.String("ip", "0.0.0.0", "IP address")
-
-	flag.Parse()
 
 	// load config file
 	configFile, err := ioutil.ReadFile(*configFilePath)
@@ -26,9 +22,6 @@ func main() {
 
 	// Class for server
 	s := server.NewServer(configFile)
-
-	s.SetIP(*IP)
-	s.SetPort(*port)
 
 	f, err := os.OpenFile(s.GetConfigPath(), os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
 	if err != nil {
@@ -51,6 +44,6 @@ func main() {
 	}
 
 	go s.FailureDetection()
-	log.Printf("Starting server on IP: %s and port: %d", *IP, *port)
+	log.Printf("Starting server on IP: %s and port: %d", s.GetIP(), s.GetPort())
 	s.ServerLoop()
 }

@@ -2,6 +2,7 @@
     "ip": "127.0.0.1",
     "port": 8081,
     "ping_timeout": 200,
+    "period_time": 200,
     "dissemination_timeout": 200,
     "fail_timeout": 200,
     "ttl": 3,
