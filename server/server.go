@@ -52,6 +52,18 @@ type suspiciousMessage struct {
 	TS   time.Time
 }
 
+type joinMessage struct {
+	NodeID string
+	TTL    uint8
+	TS     time.Time
+}
+
+type leaveMessage struct {
+	NodeID string
+	TTL    uint8
+	TS     time.Time
+}
+
 type sortMemList []string
 
 func (s sortMemList) Len() int {
@@ -84,8 +96,8 @@ type Server struct {
 	sortedMemList []string         // ["id-ts", ...]
 	// { "id-ts": { "type" : 0, "int": 0 } }
 	suspiciousCachedMessage map[string]suspiciousMessage
-	joinCachedMessage       map[string]uint8     // {"id-ts": #TTL}
-	leaveCachedMessage      map[string]uint8     // {"id-ts": #TTL}
+	joinCachedMessage       []joinMessage
+	leaveCachedMessage      []leaveMessage
 	suspectList             map[string]time.Time // {"id-ts": timestamp}
 	pingList                []string             // ['id-ts']
 	failTimeout             time.Duration
@@ -132,8 +144,8 @@ func (s *Server) init() {
 	s.memList = map[string]uint8{s.ID: 0}
 	s.generateSortedMemList()
 	s.suspiciousCachedMessage = map[string]suspiciousMessage{}
-	s.joinCachedMessage = map[string]uint8{}
-	s.leaveCachedMessage = map[string]uint8{}
+	s.joinCachedMessage = []joinMessage{}
+	s.leaveCachedMessage = []leaveMessage{}
 	s.suspectList = map[string]time.Time{}
 	s.pingList = []string{}
 	s.failTimeout = s.calculateTimeoutDuration(s.config.FailTimeout)
@@ -312,35 +324,51 @@ func (s *Server) pushSuspiciousCachedMessage(sStatus suspiciousStatus, nodeID st
 }
 
 func (s *Server) pushJoinCachedMessage(nodeID string, ttl uint8) {
-	s.joinCachedMessage[nodeID] = ttl
+	s.joinCachedMessage = append(s.joinCachedMessage, joinMessage{NodeID: nodeID, TTL: ttl})
 }
 
 func (s *Server) pushLeaveCachedMessage(nodeID string, ttl uint8) {
-	s.leaveCachedMessage[nodeID] = ttl
+	s.leaveCachedMessage = append(s.leaveCachedMessage, leaveMessage{NodeID: nodeID, TTL: ttl})
 }
 
 func (s *Server) getCachedMessages() [][]byte {
 	// Get cached messages from s.suspiciousCachedMessage, s.joinCachedMessage, s.leaveCachedMessage
 	messages := make([][]byte, 0)
 
-	for k, v := range s.joinCachedMessage {
-		log.Printf("joinCachedMessages nodeID: %s, inc: %d", k, v)
-		buf := []byte{byte(payloadJoin)}
-		buf = append(buf, byte('_'))
-		buf = append(buf, []byte(k)...)
-		buf = append(buf, byte('_'))
-		buf = append(buf, byte(v))
-		log.Printf(" buf: %v\n", string(buf))
-		messages = append(messages, buf)
+	for k, message := range s.joinCachedMessage {
+		if time.Now().Sub(message.TS) > 0 {
+			if k == len(s.joinCachedMessage) {
+				s.joinCachedMessage = s.joinCachedMessage[:k]
+			} else {
+				s.joinCachedMessage = append(s.joinCachedMessage[:k], s.joinCachedMessage[k+1:]...)
+			}
+		} else {
+			log.Printf("joinCachedMessages nodeID: %s, ttl: %d", message.NodeID, message.TTL)
+			buf := []byte{byte(payloadJoin)}
+			buf = append(buf, byte('_'))
+			buf = append(buf, []byte(message.NodeID)...)
+			buf = append(buf, byte('_'))
+			buf = append(buf, byte(message.TTL))
+			log.Printf(" buf: %v\n", string(buf))
+			messages = append(messages, buf)
+		}
 	}
 
-	for k, v := range s.leaveCachedMessage {
-		buf := []byte{byte(payloadLeave)}
-		buf = append(buf, byte('_'))
-		buf = append(buf, []byte(k)...)
-		buf = append(buf, byte('_'))
-		buf = append(buf, byte(v))
-		messages = append(messages, buf)
+	for k, message := range s.leaveCachedMessage {
+		if time.Now().Sub(message.TS) > 0 {
+			if k == len(s.joinCachedMessage) {
+				s.leaveCachedMessage = s.leaveCachedMessage[:k]
+			} else {
+				s.leaveCachedMessage = append(s.leaveCachedMessage[:k], s.leaveCachedMessage[k+1:]...)
+			}
+		} else {
+			buf := []byte{byte(payloadLeave)}
+			buf = append(buf, byte('_'))
+			buf = append(buf, []byte(message.NodeID)...)
+			buf = append(buf, byte('_'))
+			buf = append(buf, byte(message.TTL))
+			messages = append(messages, buf)
+		}
 	}
 
 	for k, v := range s.suspiciousCachedMessage {
@@ -404,6 +432,7 @@ func (s *Server) Ping(nodeID string, ch chan bool) {
 	if bufList[0][0] == byte(messageAck) {
 		s.DealWithPayloads(bufList[2:])
 	}
+	log.Printf("ping %s successfully\n", nodeID)
 	ch <- true
 }
 
@@ -485,10 +514,12 @@ func (s *Server) FailureDetection() error {
 		select {
 		case res := <-ch:
 			if !res {
+				log.Printf("ping %s failed\n", nodeID)
 				s.suspectNode(nodeID, s.failTimeout, s.cachedTimeout)
 			}
 		case <-time.After(time.Duration(s.config.PingTimeout) * time.Millisecond):
 			s.suspectNode(nodeID, s.failTimeout, s.cachedTimeout)
+			log.Printf("ping %s timeout\n", nodeID)
 		}
 		s.pingIter++
 		s.pingIter = s.pingIter % len(s.pingList)
