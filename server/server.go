@@ -304,10 +304,11 @@ func (s *Server) JoinToGroup() error {
 
 	recBuf := make([]byte, 1024)
 	n, _, err := conn.ReadFrom(recBuf)
-	buf = recBuf[:n]
 	if err != nil {
 		return errors.New("unable to read from udp conn")
 	}
+	buf = recBuf[:n]
+	log.Printf("JoinToGroup: receive message: %s", buf)
 
 	// buf: messageMemList:s.ID:ip-ts_inc:ip-ts_inc:...
 	bufList := bytes.Split(buf, []byte(":"))
@@ -434,6 +435,7 @@ func (s *Server) Ping(nodeID string, ch chan bool) {
 		return
 	}
 	buf := recBuf[:n]
+	log.Printf("Ping: receive message: %s", buf)
 
 	// buf: 0:s.ID:0_ip-ts_2:1_ip-ts_1:2_ip-ts_234:3_ip-ts_223
 	// bufList[0]: [messageType]
@@ -584,6 +586,7 @@ func (s *Server) ServerLoop() {
 			fmt.Println("Error: ", err)
 		}
 		buf := recBuf[:n]
+		log.Printf("ServerLoop: receive message: %s", buf)
 
 		if len(buf) == 0 {
 			continue
