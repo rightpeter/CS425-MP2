@@ -43,7 +43,8 @@ const (
 	messageAck         messageType = 1
 	messageJoin        messageType = 2
 	messageMemList     messageType = 3
-	messageShowMemList messageType = 4
+	messageLeave       messageType = 4
+	messageShowMemList messageType = 5
 )
 
 type suspiciousMessage struct {
@@ -76,12 +77,14 @@ func shuffleMemList(memList []string) {
 
 // Server server class
 type Server struct {
-	ID            string
-	config        model.NodeConfig
-	pingIter      int
-	ServerConn    *net.UDPConn
-	memList       map[string]uint8 // { "id-ts": 0 }
-	sortedMemList []string         // ["id-ts", ...]
+	ID                  string
+	serverLoopKey       bool
+	failureDetectionKey bool
+	config              model.NodeConfig
+	pingIter            int
+	ServerConn          *net.UDPConn
+	memList             map[string]uint8 // { "id-ts": 0 }
+	sortedMemList       []string         // ["id-ts", ...]
 	// { "id-ts": { "type" : 0, "int": 0 } }
 	suspiciousCachedMessage map[string]suspiciousMessage
 	joinCachedMessage       map[string]time.Time // {"ip-ts_ttl": timestamp}
@@ -128,6 +131,8 @@ func (s *Server) loadConfigFromJSON(jsonFile []byte) error {
 
 func (s *Server) init() {
 	s.ID = fmt.Sprintf("%s-%d", s.config.IP, time.Now().Unix())
+	s.serverLoopKey = true
+	s.failureDetectionKey = true
 	s.pingIter = 0
 	s.memList = map[string]uint8{s.ID: 0}
 	s.generateSortedMemList()
@@ -227,11 +232,12 @@ func (s *Server) generatePingList() error {
 
 func (s *Server) newNode(nodeID string, inc uint8) {
 	if _, ok := s.memList[nodeID]; !ok {
-		log.Printf("new node %s join the group", nodeID)
+		log.Println("----------------------------- New Node ------------------------------")
+		log.Printf("%s join the group", nodeID)
 		s.memList[nodeID] = inc
 		s.generateSortedMemList()
 		s.generatePingList()
-		log.Printf("memList update: %s\n", s.sortedMemList)
+		log.Printf("memList update: %s\n\n", s.sortedMemList)
 	} else {
 		if inc > s.memList[nodeID] {
 			s.memList[nodeID] = inc
@@ -241,12 +247,13 @@ func (s *Server) newNode(nodeID string, inc uint8) {
 
 func (s *Server) deleteNode(nodeID string) {
 	if _, ok := s.memList[nodeID]; ok {
-		log.Printf("node: %s has been kicked out from the system", nodeID)
+		log.Println("----------------------------- Delete Node ------------------------------")
+		log.Printf("%s has been deleted", nodeID)
 		delete(s.memList, nodeID)
 		s.generateSortedMemList()
 		s.generatePingList()
 		s.pushSuspiciousCachedMessage(suspiciousFail, nodeID, s.getIncFromCachedMessages(nodeID), s.cachedTimeout)
-		log.Printf("memList update: %s\n", s.sortedMemList)
+		log.Printf("memList update: %s\n\n", s.sortedMemList)
 	}
 }
 
@@ -506,9 +513,23 @@ func (s *Server) DealWithMemList(bufList [][]byte) {
 	}
 }
 
+// DealWithLeave deal with messageLeave
+func (s *Server) DealWithLeave(buf []byte) {
+	nodeID := string(buf)
+
+	s.pushLeaveCachedMessage(nodeID, s.config.TTL, s.cachedTimeout)
+	go func() {
+		time.Sleep(s.cachedTimeout)
+		s.failureDetectionKey = false
+		s.serverLoopKey = false
+		log.Printf("Server will quit after DisseminationTimeout!\n")
+		log.Printf("If you are the last member in the group, please kill the server manually!\n")
+	}()
+}
+
 // FailureDetection ping loop
-func (s *Server) FailureDetection() error {
-	for {
+func (s *Server) FailureDetection() {
+	for s.failureDetectionKey {
 		time.Sleep(time.Duration(s.config.PeriodTime) * time.Millisecond)
 		if len(s.pingList) == 0 {
 			continue
@@ -554,6 +575,11 @@ func (s *Server) generateJoinBuffer() []byte {
 	return s.generateBuffer(messageJoin, [][]byte{})
 }
 
+// buf: messageJoin:s.ID
+func (s *Server) generateLeaveBuffer() []byte {
+	return s.generateBuffer(messageLeave, [][]byte{})
+}
+
 // buf: messageMemList:s.ID:ip-ts_inc:ip-ts_inc:ip-ts_inc
 func (s *Server) generateMemListBuffer() []byte {
 	payloads := [][]byte{}
@@ -575,13 +601,14 @@ func (s *Server) ServerLoop() {
 	defer s.ServerConn.Close()
 
 	recBuf := make([]byte, 1024)
-	for {
+	for s.serverLoopKey {
 		n, addr, err := s.ServerConn.ReadFromUDP(recBuf)
 		if err != nil {
 			fmt.Println("Error: ", err)
+			continue
 		}
 		buf := recBuf[:n]
-		//log.Printf("ServerLoop: receive message: %s", buf)
+		log.Printf("ServerLoop: receive message: %s", buf)
 
 		if len(buf) == 0 {
 			continue
@@ -612,7 +639,14 @@ func (s *Server) ServerLoop() {
 			// bufList[0]: [messageMemList]
 			// bufList[1:]: [[ip-ts], [ip-ts], ...]
 			s.DealWithMemList(bufList[1:])
+		case messageLeave:
+			// buffList: [[messageLeave], [ip-ts]]
+			log.Printf("Leaving the group ...")
+			s.DealWithLeave(bufList[1])
+			replyBuf := s.generateLeaveBuffer()
+			s.ServerConn.WriteTo(replyBuf, addr)
 		case messageShowMemList:
+			// buffList: [[messageShowMemList], [ip-ts]]
 			replyBuf := s.generateMemListBuffer()
 			s.ServerConn.WriteTo(replyBuf, addr)
 		}
