@@ -221,6 +221,7 @@ func (s *Server) generatePingList() error {
 		s.pingList = append(coreNodeList, leafNodeList...)
 		s.pingIter = 0
 	}
+	log.Printf("generatePingList: i: %d, memList: %v, pingList: %v", i, s.sortedMemList, s.pingList)
 	return nil
 }
 
