@@ -301,11 +301,11 @@ func (s *Server) JoinToGroup() error {
 
 	recBuf := make([]byte, 1024)
 	n, _, err := conn.ReadFrom(recBuf)
+	buf = recBuf[:n]
 	log.Printf("JoinToGroup: ReadFrom buf: %s", buf)
 	if err != nil {
 		return errors.New("unable to read from udp conn")
 	}
-	buf = recBuf[:n]
 
 	// buf: messageMemList:s.ID:ip-ts_inc:ip-ts_inc:...
 	bufList := bytes.Split(buf, []byte(":"))
