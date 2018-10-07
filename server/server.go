@@ -333,26 +333,22 @@ func (s *Server) pushSuspiciousCachedMessage(sStatus suspiciousStatus, nodeID st
 	}
 }
 
-func (s *Server) pushJoinCachedMessage(nodeID string, ttl uint8) {
-	s.joinCachedMessage = append(s.joinCachedMessage, joinMessage{NodeID: nodeID, TTL: ttl})
+func (s *Server) pushJoinCachedMessage(nodeID string, ttl uint8, timeout time.Duration) {
+	s.joinCachedMessage = append(s.joinCachedMessage, joinMessage{NodeID: nodeID, TTL: ttl, TS: time.Now().Add(timeout)})
 }
 
-func (s *Server) pushLeaveCachedMessage(nodeID string, ttl uint8) {
-	s.leaveCachedMessage = append(s.leaveCachedMessage, leaveMessage{NodeID: nodeID, TTL: ttl})
+func (s *Server) pushLeaveCachedMessage(nodeID string, ttl uint8, timeout time.Duration) {
+	s.leaveCachedMessage = append(s.leaveCachedMessage, leaveMessage{NodeID: nodeID, TTL: ttl, TS: time.Now().Add(timeout)})
 }
 
 func (s *Server) getCachedMessages() [][]byte {
 	// Get cached messages from s.suspiciousCachedMessage, s.joinCachedMessage, s.leaveCachedMessage
 	messages := make([][]byte, 0)
 
-	for k, message := range s.joinCachedMessage {
-		if time.Now().Sub(message.TS) > 0 {
-			if k == len(s.joinCachedMessage) {
-				s.joinCachedMessage = s.joinCachedMessage[:k]
-			} else {
-				s.joinCachedMessage = append(s.joinCachedMessage[:k], s.joinCachedMessage[k+1:]...)
-			}
-		} else {
+	newJoinCachedMessage := []joinMessage{}
+	for _, message := range s.joinCachedMessage {
+		if time.Now().Sub(message.TS) < 0 {
+			newJoinCachedMessage = append(newJoinCachedMessage, message)
 			buf := []byte{byte(payloadJoin)}
 			buf = append(buf, byte('_'))
 			buf = append(buf, []byte(message.NodeID)...)
@@ -361,15 +357,12 @@ func (s *Server) getCachedMessages() [][]byte {
 			messages = append(messages, buf)
 		}
 	}
+	s.joinCachedMessage = newJoinCachedMessage
 
-	for k, message := range s.leaveCachedMessage {
-		if time.Now().Sub(message.TS) > 0 {
-			if k == len(s.joinCachedMessage) {
-				s.leaveCachedMessage = s.leaveCachedMessage[:k]
-			} else {
-				s.leaveCachedMessage = append(s.leaveCachedMessage[:k], s.leaveCachedMessage[k+1:]...)
-			}
-		} else {
+	newLeaveCachedMessage := []leaveMessage{}
+	for _, message := range s.leaveCachedMessage {
+		if time.Now().Sub(message.TS) < 0 {
+			newLeaveCachedMessage = append(newLeaveCachedMessage, message)
 			buf := []byte{byte(payloadLeave)}
 			buf = append(buf, byte('_'))
 			buf = append(buf, []byte(message.NodeID)...)
@@ -378,6 +371,7 @@ func (s *Server) getCachedMessages() [][]byte {
 			messages = append(messages, buf)
 		}
 	}
+	s.leaveCachedMessage = newLeaveCachedMessage
 
 	for k, v := range s.suspiciousCachedMessage {
 		if time.Now().Sub(v.TS) > 0 {
@@ -456,7 +450,7 @@ func (s *Server) DealWithJoin(inpMsg []byte) {
 	nodeID := string(inpMsg)
 
 	s.newNode(nodeID, 0)
-	s.pushJoinCachedMessage(nodeID, s.config.TTL)
+	s.pushJoinCachedMessage(nodeID, s.config.TTL, s.cachedTimeout)
 }
 
 // DealWithPayloads deal with all kinds of messages
@@ -473,11 +467,11 @@ func (s *Server) DealWithPayloads(payloads [][]byte) {
 		case payloadJoin:
 			s.newNode(nodeID, 0)
 			ttl := uint8(message[2][0]) - 1
-			s.pushJoinCachedMessage(nodeID, ttl)
+			s.pushJoinCachedMessage(nodeID, ttl, s.cachedTimeout)
 		case payloadLeave:
 			s.deleteNode(nodeID)
 			ttl := uint8(message[2][0]) - 1
-			s.pushLeaveCachedMessage(nodeID, ttl)
+			s.pushLeaveCachedMessage(nodeID, ttl, s.cachedTimeout)
 		case payloadSuspicious:
 			inc := uint8(message[2][0])
 			if nodeID == s.ID {
