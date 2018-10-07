@@ -467,7 +467,7 @@ func (s *Server) DealWithPayloads(payloads [][]byte) {
 		nodeID := string(message[1])
 		switch payloadType(message[0][0]) {
 		case payloadJoin:
-			s.newNode(nodeID, 0)
+			s.newNode(nodeID, uint8(0))
 			ttl := uint8(message[2][0]) - 1
 			if ttl > 0 {
 				s.pushJoinCachedMessage(nodeID, ttl, s.cachedTimeout)
@@ -483,7 +483,7 @@ func (s *Server) DealWithPayloads(payloads [][]byte) {
 			if nodeID == s.ID {
 				if inc >= s.memList[s.ID] {
 					log.Printf("++++++++++++++++++++++++ %s.Inc +1 +++++++++++++++++++++++", nodeID)
-					s.memList[s.ID] = inc + 1
+					s.memList[s.ID] = inc + uint8(1)
 					s.pushSuspiciousCachedMessage(suspiciousAlive, nodeID, s.memList[s.ID], s.cachedTimeout)
 				}
 			} else {
@@ -586,7 +586,8 @@ func (s *Server) generateMemListBuffer() []byte {
 	payloads := [][]byte{}
 
 	for _, nodeID := range s.sortedMemList {
-		payload := bytes.NewBufferString(fmt.Sprintf("%s_%d", nodeID, s.memList[nodeID]))
+		payload := bytes.NewBufferString(fmt.Sprintf("%s_", nodeID))
+		payload.WriteByte(s.memList[nodeID])
 		payloads = append(payloads, payload.Bytes())
 	}
 
