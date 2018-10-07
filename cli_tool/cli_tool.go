@@ -109,7 +109,7 @@ func main() {
 						message := bytes.Split(buf, []byte("_"))
 						// message = [[ip-ts], [inc]]
 						nodeID := string(message[0])
-						inc := uint8(message[1][0])
+						inc := int(message[1][0])
 						fmt.Printf("nodeID: %s, inc: %d\n", nodeID, inc)
 					}
 				}

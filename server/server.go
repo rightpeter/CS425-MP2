@@ -233,10 +233,10 @@ func (s *Server) generatePingList() error {
 func (s *Server) newNode(nodeID string, inc uint8) {
 	if _, ok := s.memList[nodeID]; !ok {
 		log.Println("----------------------------- New Node ------------------------------")
-		log.Printf("%s join the group", nodeID)
 		s.memList[nodeID] = inc
 		s.generateSortedMemList()
 		s.generatePingList()
+		log.Printf("%s_%d join the group", nodeID, inc)
 		log.Printf("memList update: %s\n\n", s.sortedMemList)
 	} else {
 		if inc > s.memList[nodeID] {
@@ -451,7 +451,7 @@ func (s *Server) Ping(nodeID string, ch chan bool) {
 func (s *Server) DealWithJoin(inpMsg []byte) {
 	nodeID := string(inpMsg)
 
-	s.newNode(nodeID, 0)
+	s.newNode(nodeID, uint8(0))
 	s.pushJoinCachedMessage(nodeID, s.config.TTL, s.cachedTimeout)
 }
 
