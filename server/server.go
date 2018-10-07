@@ -226,6 +226,7 @@ func (s *Server) generatePingList() error {
 
 func (s *Server) newNode(nodeID string, inc uint8) {
 	if _, ok := s.memList[nodeID]; !ok {
+		log.Printf("new node %s join the group", nodeID)
 		s.memList[nodeID] = inc
 		s.generateSortedMemList()
 		s.generatePingList()
@@ -239,6 +240,7 @@ func (s *Server) newNode(nodeID string, inc uint8) {
 
 func (s *Server) deleteNode(nodeID string) {
 	if _, ok := s.memList[nodeID]; ok {
+		log.Printf("node: %s has been kicked out from the system", nodeID)
 		delete(s.memList, nodeID)
 		s.generateSortedMemList()
 		s.generatePingList()
@@ -259,7 +261,6 @@ func (s *Server) suspectNode(nodeID string, failTimeout time.Duration, cachedTim
 func (s *Server) failNode(nodeID string, timeout time.Duration) {
 	time.Sleep(timeout)
 	if _, ok := s.suspectList[nodeID]; ok {
-		log.Printf("node: %s has been kicked out from the system", nodeID)
 		delete(s.suspectList, nodeID)
 		s.deleteNode(nodeID)
 	}
@@ -365,7 +366,7 @@ func (s *Server) getCachedMessages() [][]byte {
 		}
 	}
 
-	log.Printf("getCachedMessages: s.suspiciousCachedMessage: %v", s.suspiciousCachedMessage)
+	//log.Printf("getCachedMessages: s.suspiciousCachedMessage: %v", s.suspiciousCachedMessage)
 	for k, v := range s.suspiciousCachedMessage {
 		if time.Now().Sub(v.TS) > 0 {
 			delete(s.suspiciousCachedMessage, k)
@@ -422,7 +423,7 @@ func (s *Server) Ping(nodeID string, ch chan bool) {
 		return
 	}
 	buf := recBuf[:n]
-	log.Printf("Ping: receive message: %s", buf)
+	//log.Printf("Ping: receive message: %s", buf)
 
 	// buf: 0:s.ID:0_ip-ts_2:1_ip-ts_1:2_ip-ts_234:3_ip-ts_223
 	// bufList[0]: [messageType]
@@ -577,7 +578,7 @@ func (s *Server) ServerLoop() {
 			fmt.Println("Error: ", err)
 		}
 		buf := recBuf[:n]
-		log.Printf("ServerLoop: receive message: %s", buf)
+		//log.Printf("ServerLoop: receive message: %s", buf)
 
 		if len(buf) == 0 {
 			continue
