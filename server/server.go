@@ -239,11 +239,11 @@ func (s *Server) newNode(nodeID string, inc uint8) {
 
 func (s *Server) deleteNode(nodeID string) {
 	if _, ok := s.memList[nodeID]; ok {
-		log.Printf("memList update: %s\n", s.sortedMemList)
 		delete(s.memList, nodeID)
 		s.generateSortedMemList()
 		s.generatePingList()
 		s.pushSuspiciousCachedMessage(suspiciousFail, nodeID, s.getIncFromCachedMessages(nodeID), s.cachedTimeout)
+		log.Printf("memList update: %s\n", s.sortedMemList)
 	}
 }
 
