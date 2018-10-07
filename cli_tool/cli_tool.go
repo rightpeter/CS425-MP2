@@ -46,7 +46,7 @@ func generateShowMemListBuffer() []byte {
 }
 
 func executeCommand(command string) [][]byte {
-	serverAddr, err := net.ResolveUDPAddr("udp", fmt.Sprintf("%s:%d", config.IntroducerIP, config.Port))
+	serverAddr, err := net.ResolveUDPAddr("udp", fmt.Sprintf("%s:%d", config.IP, config.Port))
 	if err != nil {
 		fmt.Println("unable to resolve udp addr")
 	}
