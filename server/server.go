@@ -482,6 +482,7 @@ func (s *Server) DealWithPayloads(payloads [][]byte) {
 			inc := uint8(message[2][0])
 			if nodeID == s.ID {
 				if inc >= s.memList[s.ID] {
+					log.Printf("++++++++++++++++++++++++ %s.Inc +1 +++++++++++++++++++++++", nodeID)
 					s.memList[s.ID] = inc + 1
 					s.pushSuspiciousCachedMessage(suspiciousAlive, nodeID, s.memList[s.ID], s.cachedTimeout)
 				}
