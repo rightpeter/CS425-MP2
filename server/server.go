@@ -52,18 +52,6 @@ type suspiciousMessage struct {
 	TS   time.Time
 }
 
-type joinMessage struct {
-	NodeID string
-	TTL    uint8
-	TS     time.Time
-}
-
-type leaveMessage struct {
-	NodeID string
-	TTL    uint8
-	TS     time.Time
-}
-
 type sortMemList []string
 
 func (s sortMemList) Len() int {
@@ -96,10 +84,10 @@ type Server struct {
 	sortedMemList []string         // ["id-ts", ...]
 	// { "id-ts": { "type" : 0, "int": 0 } }
 	suspiciousCachedMessage map[string]suspiciousMessage
-	joinCachedMessage       []joinMessage
-	leaveCachedMessage      []leaveMessage
-	suspectList             map[string]time.Time // {"id-ts": timestamp}
-	pingList                []string             // ['id-ts']
+	joinCachedMessage       map[string]time.Time // {"ip-ts_ttl": timestamp}
+	leaveCachedMessage      map[string]time.Time // {"ip-ts_ttl": timestamp}
+	suspectList             map[string]time.Time // {"ip-ts": timestamp}
+	pingList                []string             // ['ip-ts']
 	failTimeout             time.Duration
 	cachedTimeout           time.Duration
 }
@@ -144,8 +132,8 @@ func (s *Server) init() {
 	s.memList = map[string]uint8{s.ID: 0}
 	s.generateSortedMemList()
 	s.suspiciousCachedMessage = map[string]suspiciousMessage{}
-	s.joinCachedMessage = []joinMessage{}
-	s.leaveCachedMessage = []leaveMessage{}
+	s.joinCachedMessage = map[string]time.Time{}
+	s.leaveCachedMessage = map[string]time.Time{}
 	s.suspectList = map[string]time.Time{}
 	s.pingList = []string{}
 	s.failTimeout = s.calculateTimeoutDuration(s.config.FailTimeout)
@@ -334,44 +322,48 @@ func (s *Server) pushSuspiciousCachedMessage(sStatus suspiciousStatus, nodeID st
 }
 
 func (s *Server) pushJoinCachedMessage(nodeID string, ttl uint8, timeout time.Duration) {
-	s.joinCachedMessage = append(s.joinCachedMessage, joinMessage{NodeID: nodeID, TTL: ttl, TS: time.Now().Add(timeout)})
+	buf := bytes.NewBufferString(nodeID)
+	buf.WriteByte('_')
+	buf.WriteByte(byte(ttl))
+	if _, ok := s.joinCachedMessage[buf.String()]; !ok {
+		s.joinCachedMessage[buf.String()] = time.Now().Add(timeout)
+	}
 }
 
 func (s *Server) pushLeaveCachedMessage(nodeID string, ttl uint8, timeout time.Duration) {
-	s.leaveCachedMessage = append(s.leaveCachedMessage, leaveMessage{NodeID: nodeID, TTL: ttl, TS: time.Now().Add(timeout)})
+	buf := bytes.NewBufferString(nodeID)
+	buf.WriteByte('_')
+	buf.WriteByte(byte(ttl))
+	if _, ok := s.leaveCachedMessage[buf.String()]; !ok {
+		s.leaveCachedMessage[buf.String()] = time.Now().Add(timeout)
+	}
 }
 
 func (s *Server) getCachedMessages() [][]byte {
 	// Get cached messages from s.suspiciousCachedMessage, s.joinCachedMessage, s.leaveCachedMessage
 	messages := make([][]byte, 0)
 
-	newJoinCachedMessage := []joinMessage{}
-	for _, message := range s.joinCachedMessage {
-		if time.Now().Sub(message.TS) < 0 {
-			newJoinCachedMessage = append(newJoinCachedMessage, message)
+	for k, v := range s.joinCachedMessage {
+		if time.Now().Sub(v) > 0 {
+			delete(s.joinCachedMessage, k)
+		} else {
 			buf := []byte{byte(payloadJoin)}
 			buf = append(buf, byte('_'))
-			buf = append(buf, []byte(message.NodeID)...)
-			buf = append(buf, byte('_'))
-			buf = append(buf, byte(message.TTL))
+			buf = append(buf, []byte(k)...)
 			messages = append(messages, buf)
 		}
 	}
-	s.joinCachedMessage = newJoinCachedMessage
 
-	newLeaveCachedMessage := []leaveMessage{}
-	for _, message := range s.leaveCachedMessage {
-		if time.Now().Sub(message.TS) < 0 {
-			newLeaveCachedMessage = append(newLeaveCachedMessage, message)
+	for k, v := range s.leaveCachedMessage {
+		if time.Now().Sub(v) > 0 {
+			delete(s.leaveCachedMessage, k)
+		} else {
 			buf := []byte{byte(payloadLeave)}
 			buf = append(buf, byte('_'))
-			buf = append(buf, []byte(message.NodeID)...)
-			buf = append(buf, byte('_'))
-			buf = append(buf, byte(message.TTL))
+			buf = append(buf, []byte(k)...)
 			messages = append(messages, buf)
 		}
 	}
-	s.leaveCachedMessage = newLeaveCachedMessage
 
 	for k, v := range s.suspiciousCachedMessage {
 		if time.Now().Sub(v.TS) > 0 {
