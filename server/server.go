@@ -199,14 +199,12 @@ func (s *Server) generateSortedMemList() {
 
 func (s *Server) generatePingList() error {
 	i := s.findIndexInSortedMemList(s.ID)
-	log.Printf("in generatePintList, s.sortedMemList: %v, i: %d\n", s.sortedMemList, i)
 	if i >= 4 {
 		s.pingList = []string{}
 		s.pingIter = 0
 	} else if i == -1 {
 		s.pingList = []string{}
 		s.pingIter = 0
-		return errors.New("self is not in s.sortedMemList")
 	} else {
 		coreNodeList := []string{}
 		coreNodeListSize := 4
@@ -243,8 +241,7 @@ func (s *Server) newNode(nodeID string, inc uint8) {
 		s.memList[nodeID] = inc
 		s.generateSortedMemList()
 		s.generatePingList()
-		log.Printf("new node: %s, join the group\n", nodeID)
-		log.Printf("memList: %s\n", s.sortedMemList)
+		log.Printf("memList update: %s\n", s.sortedMemList)
 	} else {
 		if inc > s.memList[nodeID] {
 			s.memList[nodeID] = inc
@@ -254,12 +251,11 @@ func (s *Server) newNode(nodeID string, inc uint8) {
 
 func (s *Server) deleteNode(nodeID string) {
 	if _, ok := s.memList[nodeID]; ok {
+		log.Printf("memList update: %s\n", s.sortedMemList)
 		delete(s.memList, nodeID)
 		s.generateSortedMemList()
 		s.generatePingList()
 		s.pushSuspiciousCachedMessage(suspiciousFail, nodeID, s.getIncFromCachedMessages(nodeID), s.cachedTimeout)
-		log.Printf("node: %s is deleted from the group\n", nodeID)
-		log.Printf("memList: %v, sortedMemList: %v, pingList: %v\n", s.memList, s.sortedMemList, s.pingList)
 	}
 }
 
@@ -274,11 +270,10 @@ func (s *Server) suspectNode(nodeID string, failTimeout time.Duration, cachedTim
 
 func (s *Server) failNode(nodeID string, timeout time.Duration) {
 	time.Sleep(timeout)
-	log.Printf("11111 failNode, nodeID: %s, memList: %v, sortedMemList: %v, suspectList: %v", nodeID, s.memList, s.sortedMemList, s.suspectList)
 	if _, ok := s.suspectList[nodeID]; ok {
+		log.Printf("node: %s has been kicked out from the system", nodeID)
 		delete(s.suspectList, nodeID)
 		s.deleteNode(nodeID)
-		log.Printf("222222 failNode, memList: %v, sortedMemList: %v, suspectList: %v", s.memList, s.sortedMemList, s.suspectList)
 	}
 }
 
@@ -306,12 +301,10 @@ func (s *Server) JoinToGroup() error {
 	if err != nil {
 		return errors.New("unable to write to udp conn")
 	}
-	log.Printf("JoinToGroup: Write buf: %s\n", buf)
 
 	recBuf := make([]byte, 1024)
 	n, _, err := conn.ReadFrom(recBuf)
 	buf = recBuf[:n]
-	log.Printf("JoinToGroup: ReadFrom buf: %s", buf)
 	if err != nil {
 		return errors.New("unable to read from udp conn")
 	}
@@ -359,13 +352,11 @@ func (s *Server) getCachedMessages() [][]byte {
 				s.joinCachedMessage = append(s.joinCachedMessage[:k], s.joinCachedMessage[k+1:]...)
 			}
 		} else {
-			log.Printf("joinCachedMessages nodeID: %s, ttl: %d", message.NodeID, message.TTL)
 			buf := []byte{byte(payloadJoin)}
 			buf = append(buf, byte('_'))
 			buf = append(buf, []byte(message.NodeID)...)
 			buf = append(buf, byte('_'))
 			buf = append(buf, byte(message.TTL))
-			log.Printf(" buf: %v\n", string(buf))
 			messages = append(messages, buf)
 		}
 	}
@@ -430,7 +421,6 @@ func (s *Server) Ping(nodeID string, ch chan bool) {
 	payloads := s.getCachedMessages()
 	replyBuf := s.generateBuffer(messagePing, payloads)
 
-	log.Printf("in Ping Write replyBuf: %s\n", replyBuf)
 	_, err = conn.Write(replyBuf)
 	if err != nil {
 		ch <- false
@@ -445,7 +435,6 @@ func (s *Server) Ping(nodeID string, ch chan bool) {
 	}
 	buf := recBuf[:n]
 
-	log.Printf("in Ping, ReadFrom n: %d, buf: %s", n, buf)
 	// buf: 0:s.ID:0_ip-ts_2:1_ip-ts_1:2_ip-ts_234:3_ip-ts_223
 	// bufList[0]: [messageType]
 	// bufList[1]: ip-ts
@@ -456,7 +445,6 @@ func (s *Server) Ping(nodeID string, ch chan bool) {
 			s.DealWithPayloads(bufList[2:])
 		}
 	}
-	log.Printf("ping %s successfully\n", nodeID)
 	ch <- true
 }
 
@@ -527,7 +515,6 @@ func (s *Server) DealWithMemList(bufList [][]byte) {
 func (s *Server) FailureDetection() error {
 	for {
 		time.Sleep(time.Duration(s.config.PeriodTime) * time.Millisecond)
-		log.Printf("s.pingList: %v, s.pingIter: %d\n", s.pingList, s.pingIter)
 		if len(s.pingList) == 0 {
 			continue
 		}
@@ -538,12 +525,10 @@ func (s *Server) FailureDetection() error {
 		select {
 		case res := <-ch:
 			if !res {
-				log.Printf("ping %s failed\n", nodeID)
 				s.suspectNode(nodeID, s.failTimeout, s.cachedTimeout)
 			}
 		case <-time.After(time.Duration(s.config.PingTimeout) * time.Millisecond):
 			s.suspectNode(nodeID, s.failTimeout, s.cachedTimeout)
-			log.Printf("ping %s timeout\n", nodeID)
 		}
 		s.pingIter++
 		s.pingIter = s.pingIter % len(s.pingList)
@@ -564,7 +549,6 @@ func (s *Server) generateBuffer(mType messageType, payloads [][]byte) []byte {
 		replyBuf = append(replyBuf, ':')
 		replyBuf = append(replyBuf, payload...)
 	}
-	log.Printf("in generateBuffer messageType: %d, replyBuf: %v\n", mType, string(replyBuf))
 	return replyBuf
 }
 
@@ -605,7 +589,6 @@ func (s *Server) ServerLoop() {
 			continue
 		}
 		bufList := bytes.Split(buf, []byte(":"))
-		log.Printf("bufList: n: %d, buf size: %d, messageType: %d, bufList[1]: %s, buf: %v\n", n, len(buf), bufList[0], string(bufList[1]), string(buf))
 		// bufList[0]: [messageType]
 		// bufList[1]: ip-ts
 		// bufList[2:]: payload messages
@@ -620,16 +603,13 @@ func (s *Server) ServerLoop() {
 			}
 			payloads := s.getCachedMessages()
 			replyBuf := s.generateBuffer(messageAck, payloads)
-			log.Printf("in messagePing WriteTo replyBuf: %s\n", replyBuf)
 			s.ServerConn.WriteTo(replyBuf, addr)
 		case messageJoin:
 			// buf: messageJoin:ip-ts
 			// bufList: [[messageJoin], [ip-ts]]
 			s.DealWithJoin(bufList[1])
 			replyBuf := s.generateMemListBuffer()
-			log.Printf("ServerLoop: messageJoin WriteTo replyBuf: %s\n", replyBuf)
 			s.ServerConn.WriteTo(replyBuf, addr)
-			log.Printf("ServerLoop: after messageJoin WriteTo addr: %v, replyBuf: %s\n", addr, replyBuf)
 		case messageMemList:
 			// bufList[0]: [messageMemList]
 			// bufList[1:]: [[ip-ts], [ip-ts], ...]
