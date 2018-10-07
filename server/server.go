@@ -299,12 +299,13 @@ func (s *Server) JoinToGroup() error {
 	}
 	log.Printf("JoinToGroup: Write buf: %s\n", buf)
 
-	buf = make([]byte, 2048)
-	_, _, err = conn.ReadFrom(buf)
+	recBuf := make([]byte, 1024)
+	n, _, err := conn.ReadFrom(recBuf)
 	log.Printf("JoinToGroup: ReadFrom buf: %s", buf)
 	if err != nil {
 		return errors.New("unable to read from udp conn")
 	}
+	buf = recBuf[:n]
 
 	// buf: messageMemList:s.ID:ip-ts_inc:ip-ts_inc:...
 	bufList := bytes.Split(buf, []byte(":"))
@@ -427,12 +428,14 @@ func (s *Server) Ping(nodeID string, ch chan bool) {
 		return
 	}
 
-	buf := []byte{}
-	n, _, err := conn.ReadFrom(buf)
+	recBuf := make([]byte, 1024)
+	n, _, err := conn.ReadFrom(recBuf)
 	if err != nil || n == 0 {
 		ch <- false
 		return
 	}
+	buf := recBuf[:n]
+
 	log.Printf("in Ping, ReadFrom n: %d, buf: %s", n, buf)
 	// buf: 0:s.ID:0_ip-ts_2:1_ip-ts_1:2_ip-ts_234:3_ip-ts_223
 	// bufList[0]: [messageType]
@@ -581,12 +584,13 @@ func (s *Server) ServerLoop() {
 	}
 	defer s.ServerConn.Close()
 
-	buf := make([]byte, 2048)
+	recBuf := make([]byte, 1024)
 	for {
-		n, addr, err := s.ServerConn.ReadFromUDP(buf)
+		n, addr, err := s.ServerConn.ReadFromUDP(recBuf)
 		if err != nil {
 			fmt.Println("Error: ", err)
 		}
+		buf := recBuf[:n]
 
 		if len(buf) == 0 {
 			continue
@@ -614,12 +618,8 @@ func (s *Server) ServerLoop() {
 			// bufList: [[messageJoin], [ip-ts]]
 			s.DealWithJoin(bufList[1])
 			replyBuf := s.generateMemListBuffer()
-			//log.Printf("ServerLoop: messageJoin WriteTo replyBuf: %s\n", replyBuf)
-			tmpBuf := bytes.Buffer.WriteString("Fuck_you_")
-			tmpBuf = append(tmpBuf, byte(0))
-			log.Printf("ServerLoop: messageJoin WriteTo replyBuf: %s\n", tmpBuf)
-			//s.ServerConn.WriteTo(replyBuf, addr)
-			s.ServerConn.WriteTo(tmpBuf, addr)
+			log.Printf("ServerLoop: messageJoin WriteTo replyBuf: %s\n", replyBuf)
+			s.ServerConn.WriteTo(replyBuf, addr)
 			log.Printf("ServerLoop: after messageJoin WriteTo addr: %v, replyBuf: %s\n", addr, replyBuf)
 		case messageMemList:
 			// bufList[0]: [messageMemList]
