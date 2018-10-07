@@ -314,7 +314,7 @@ func (s *Server) pushSuspiciousCachedMessage(sStatus suspiciousStatus, nodeID st
 	}
 
 	newTS := time.Now().Add(timeout) // timeout = s.calculateTimeoutDuration(s.config.XXTimeout)
-	if sStatus == suspiciousFail && inc > susMessage.Inc {
+	if sStatus == suspiciousFail || inc > susMessage.Inc {
 		s.suspiciousCachedMessage[nodeID] = suspiciousMessage{Type: sStatus, Inc: inc, TS: newTS}
 	} else if inc == susMessage.Inc && susMessage.Type == suspiciousAlive && sStatus == suspiciousSuspect {
 		s.suspiciousCachedMessage[nodeID] = suspiciousMessage{Type: sStatus, Inc: inc, TS: newTS}
