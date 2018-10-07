@@ -213,7 +213,7 @@ func (s *Server) generatePingList() error {
 
 		for j := 4; j < len(s.sortedMemList); j++ {
 			if j%4 == i {
-				leafNodeList = append(leafNodeList, s.sortedMemList[i])
+				leafNodeList = append(leafNodeList, s.sortedMemList[j])
 			}
 		}
 		shuffleMemList(coreNodeList)
