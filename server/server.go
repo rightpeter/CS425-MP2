@@ -467,11 +467,15 @@ func (s *Server) DealWithPayloads(payloads [][]byte) {
 		case payloadJoin:
 			s.newNode(nodeID, 0)
 			ttl := uint8(message[2][0]) - 1
-			s.pushJoinCachedMessage(nodeID, ttl, s.cachedTimeout)
+			if ttl > 0 {
+				s.pushJoinCachedMessage(nodeID, ttl, s.cachedTimeout)
+			}
 		case payloadLeave:
 			s.deleteNode(nodeID)
 			ttl := uint8(message[2][0]) - 1
-			s.pushLeaveCachedMessage(nodeID, ttl, s.cachedTimeout)
+			if ttl > 0 {
+				s.pushLeaveCachedMessage(nodeID, ttl, s.cachedTimeout)
+			}
 		case payloadSuspicious:
 			inc := uint8(message[2][0])
 			if nodeID == s.ID {
