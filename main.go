@@ -39,11 +39,11 @@ func main() {
 			time.Sleep(5 * time.Second)
 			continue
 		}
-		log.Printf("join to group successfully")
+		log.Printf("join to group successfully\n\n")
 		break
 	}
 
-	go s.FailureDetection()
 	log.Printf("Starting server on IP: %s and port: %d", s.GetIP(), s.GetPort())
-	s.ServerLoop()
+	go s.ServerLoop()
+	s.FailureDetection()
 }

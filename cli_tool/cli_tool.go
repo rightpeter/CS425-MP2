@@ -97,9 +97,9 @@ func main() {
 	if len(args) < 2 || len(args) > 2 {
 		fmt.Println("Usage: cli_tool [memberList, nodeID, leave]")
 	} else {
-		bufList := executeCommand(args[1])
 		switch args[1] {
 		case "memberList":
+			bufList := executeCommand(args[1])
 			// buf: messageMemList:s.ID:ip-ts_inc:ip-ts_inc:ip-ts_inc
 			if len(bufList[0]) > 0 && bufList[0][0] == byte(messageMemList) {
 				// bufList = [[messageShowMemList], [s.ID], [ip-ts_inc], [ip-ts_inc], ...]
@@ -115,17 +115,20 @@ func main() {
 				}
 			}
 		case "nodeID":
+			bufList := executeCommand(args[1])
 			// buf: messageMemList:s.ID:ip-ts_inc:ip-ts_inc:ip-ts_inc
 			if len(bufList[0]) > 0 && bufList[0][0] == byte(messageMemList) {
 				// bufList = [[messageShowMemList], [s.ID], [ip-ts_inc], [ip-ts_inc], ...]
 				fmt.Printf("ID: %s\n", bufList[1])
 			}
 		case "leave":
+			bufList := executeCommand(args[1])
 			if len(bufList[0]) > 0 && bufList[0][0] == byte(messageMemList) {
 				// bufList = [[messageLeave], [s.ID]]
 				fmt.Println("Leave the group")
 			}
-
+		default:
+			fmt.Println("Usage: cli_tool [memberList, nodeID, leave]")
 		}
 	}
 }

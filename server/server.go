@@ -520,11 +520,12 @@ func (s *Server) DealWithLeave(buf []byte) {
 
 	s.pushLeaveCachedMessage(nodeID, s.config.TTL, s.cachedTimeout)
 	go func() {
+		fmt.Println("-------- Leaving ---------")
+		fmt.Println("Server will quit after DisseminationTimeout!")
 		time.Sleep(s.cachedTimeout)
 		s.failureDetectionKey = false
 		s.serverLoopKey = false
-		log.Printf("Server will quit after DisseminationTimeout!\n")
-		log.Printf("If you are the last member in the group, please kill the server manually!\n")
+		fmt.Println("------- The End -------")
 	}()
 }
 
@@ -643,7 +644,7 @@ func (s *Server) ServerLoop() {
 			s.DealWithMemList(bufList[1:])
 		case messageLeave:
 			// buffList: [[messageLeave], [ip-ts]]
-			log.Printf("Leaving the group ...")
+			fmt.Println("Leaving the group ...")
 			s.DealWithLeave(bufList[1])
 			replyBuf := s.generateLeaveBuffer()
 			s.ServerConn.WriteTo(replyBuf, addr)
