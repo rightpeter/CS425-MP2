@@ -209,11 +209,20 @@ func (s *Server) generatePingList() error {
 		return errors.New("self is not in s.sortedMemList")
 	} else {
 		coreNodeList := []string{}
+		coreNodeListSize := 4
 		if len(s.sortedMemList) < 4 {
-			coreNodeList = s.sortedMemList
-		} else {
-			coreNodeList = s.sortedMemList[0:4]
+			coreNodeListSize = len(s.sortedMemList)
 		}
+		for i := 0; i < coreNodeListSize; i++ {
+			if s.sortedMemList[i] != s.ID {
+				coreNodeList = append(coreNodeList, s.sortedMemList[i])
+			}
+		}
+		//if len(s.sortedMemList) < 4 {
+		//coreNodeList = s.sortedMemList
+		//} else {
+		//coreNodeList = s.sortedMemList[0:4]
+		//}
 		leafNodeList := []string{}
 
 		for j := 4; j < len(s.sortedMemList); j++ {
