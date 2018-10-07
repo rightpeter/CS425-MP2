@@ -105,8 +105,7 @@ func main() {
 				// bufList = [[messageShowMemList], [s.ID], [ip-ts_inc], [ip-ts_inc], ...]
 				fmt.Println("Membership List:")
 				if len(bufList) > 3 {
-					for _, buf := range bufList {
-						fmt.Printf("buf: %s\n", buf)
+					for _, buf := range bufList[2:] {
 						message := bytes.Split(buf, []byte("_"))
 						// message = [[ip-ts], [inc]]
 						nodeID := string(message[0])
