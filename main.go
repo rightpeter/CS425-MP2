@@ -43,7 +43,7 @@ func main() {
 		break
 	}
 
-	log.Printf("Starting server on IP: %s and port: %d", s.GetIP(), s.GetPort())
+	log.Printf("Starting server on IP: %s and port: %d\n\n", s.GetIP(), s.GetPort())
 	go s.ServerLoop()
 	s.FailureDetection()
 }
