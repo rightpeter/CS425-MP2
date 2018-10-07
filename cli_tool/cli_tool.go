@@ -68,7 +68,7 @@ func executeCommand(command string) [][]byte {
 		buf = generateLeaveBuffer()
 	}
 
-	fmt.Printf("Send: %s\n", buf)
+	//fmt.Printf("Send: %s\n", buf)
 	_, err = conn.Write(buf)
 	if err != nil {
 		fmt.Println("unable to write to udp conn")
@@ -119,7 +119,7 @@ func main() {
 			// buf: messageMemList:s.ID:ip-ts_inc:ip-ts_inc:ip-ts_inc
 			if len(bufList[0]) > 0 && bufList[0][0] == byte(messageMemList) {
 				// bufList = [[messageShowMemList], [s.ID], [ip-ts_inc], [ip-ts_inc], ...]
-				fmt.Printf("ID: %s", bufList[1])
+				fmt.Printf("ID: %s\n", bufList[1])
 			}
 		case "leave":
 			if len(bufList[0]) > 0 && bufList[0][0] == byte(messageMemList) {
