@@ -221,7 +221,7 @@ func (s *Server) generatePingList() error {
 		s.pingList = append(coreNodeList, leafNodeList...)
 		s.pingIter = 0
 	}
-	log.Printf("generatePingList: i: %d, memList: %v, pingList: %v", i, s.sortedMemList, s.pingList)
+	//log.Printf("generatePingList: i: %d, memList: %v, pingList: %v", i, s.sortedMemList, s.pingList)
 	return nil
 }
 
@@ -298,7 +298,7 @@ func (s *Server) JoinToGroup() error {
 		return errors.New("unable to read from udp conn")
 	}
 	buf = recBuf[:n]
-	log.Printf("JoinToGroup: receive message: %s", buf)
+	//log.Printf("JoinToGroup: receive message: %s", buf)
 
 	// buf: messageMemList:s.ID:ip-ts_inc:ip-ts_inc:...
 	bufList := bytes.Split(buf, []byte(":"))
