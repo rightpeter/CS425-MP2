@@ -525,7 +525,9 @@ func (s *Server) FailureDetection() error {
 			s.suspectNode(nodeID, s.failTimeout, s.cachedTimeout)
 		}
 		s.pingIter++
-		s.pingIter = s.pingIter % len(s.pingList)
+		if len(s.pingList) > 0 {
+			s.pingIter = s.pingIter % len(s.pingList)
+		}
 
 		if s.pingIter == 0 {
 			s.generatePingList()
