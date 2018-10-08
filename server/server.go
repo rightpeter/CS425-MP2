@@ -495,6 +495,7 @@ func (s *Server) DealWithPayloads(payloads [][]byte) {
 				s.pushJoinCachedMessage(nodeID, ttl, s.cachedTimeout)
 			}
 		case payloadLeave:
+			log.Printf("DealWithPayloads: deal with leave: %s\n", payload)
 			s.deleteNode(nodeID)
 			ttl := uint8(message[2][0]) - 1
 			if ttl > 0 {
