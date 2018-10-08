@@ -367,8 +367,10 @@ func (s *Server) getCachedMessages() [][]byte {
 		}
 	}
 
+	log.Printf("getCachedMessages: s.leaveCachedMessage: %v", s.leaveCachedMessage)
 	for k, v := range s.leaveCachedMessage {
 		if time.Now().Sub(v) > 0 {
+			log.Printf("getCachedMessages: delete leave message: %v\n", k)
 			delete(s.leaveCachedMessage, k)
 		} else {
 			buf := []byte{byte(payloadLeave)}
@@ -378,7 +380,7 @@ func (s *Server) getCachedMessages() [][]byte {
 		}
 	}
 
-	log.Printf("getCachedMessages: s.suspiciousCachedMessage: %v", s.suspiciousCachedMessage)
+	//log.Printf("getCachedMessages: s.suspiciousCachedMessage: %v", s.suspiciousCachedMessage)
 	for k, v := range s.suspiciousCachedMessage {
 		if time.Now().Sub(v.TS) > 0 {
 			delete(s.suspiciousCachedMessage, k)
@@ -459,6 +461,22 @@ func (s *Server) DealWithJoin(inpMsg []byte) {
 	s.pushJoinCachedMessage(nodeID, s.config.TTL, s.cachedTimeout)
 }
 
+// DealWithLeave deal with messageLeave
+func (s *Server) DealWithLeave(buf []byte) {
+	nodeID := string(buf)
+
+	s.pushLeaveCachedMessage(nodeID, s.config.TTL, s.cachedTimeout)
+	log.Printf("DealWithLeave: s.leaveCachedMessage: %v\n", s.leaveCachedMessage)
+	go func() {
+		fmt.Println("-------- Leaving ---------")
+		fmt.Println("Server will quit after DisseminationTimeout!")
+		time.Sleep(s.cachedTimeout)
+		//s.failureDetectionKey = false
+		//s.serverLoopKey = false
+		fmt.Println("------- The End -------")
+	}()
+}
+
 // DealWithPayloads deal with all kinds of messages
 // payloads: [[0_ip-ts_2], [1_ip-ts_1], [2_ip-ts_234], [3_ip-ts_223]]
 func (s *Server) DealWithPayloads(payloads [][]byte) {
@@ -515,21 +533,6 @@ func (s *Server) DealWithMemList(bufList [][]byte) {
 		inc := uint8(message[1][0])
 		s.newNode(nodeID, inc)
 	}
-}
-
-// DealWithLeave deal with messageLeave
-func (s *Server) DealWithLeave(buf []byte) {
-	nodeID := string(buf)
-
-	s.pushLeaveCachedMessage(nodeID, s.config.TTL, s.cachedTimeout)
-	go func() {
-		fmt.Println("-------- Leaving ---------")
-		fmt.Println("Server will quit after DisseminationTimeout!")
-		time.Sleep(s.cachedTimeout)
-		//s.failureDetectionKey = false
-		//s.serverLoopKey = false
-		fmt.Println("------- The End -------")
-	}()
 }
 
 // FailureDetection ping loop
