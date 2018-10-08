@@ -463,9 +463,7 @@ func (s *Server) DealWithJoin(inpMsg []byte) {
 
 // DealWithLeave deal with messageLeave
 func (s *Server) DealWithLeave(buf []byte) {
-	nodeID := string(buf)
-
-	s.pushLeaveCachedMessage(nodeID, s.config.TTL, s.cachedTimeout)
+	s.pushLeaveCachedMessage(s.ID, s.config.TTL, s.cachedTimeout)
 	log.Printf("DealWithLeave: s.leaveCachedMessage: %v\n", s.leaveCachedMessage)
 	go func() {
 		fmt.Println("-------- Leaving ---------")
