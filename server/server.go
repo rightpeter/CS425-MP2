@@ -249,10 +249,10 @@ func (s *Server) deleteNode(nodeID string) {
 	if _, ok := s.memList[nodeID]; ok {
 		log.Println("----------------------------- Delete Node ------------------------------")
 		log.Printf("%s has been deleted", nodeID)
+		s.pushSuspiciousCachedMessage(suspiciousFail, nodeID, s.getIncFromCachedMessages(nodeID), s.cachedTimeout)
 		delete(s.memList, nodeID)
 		s.generateSortedMemList()
 		s.generatePingList()
-		s.pushSuspiciousCachedMessage(suspiciousFail, nodeID, s.getIncFromCachedMessages(nodeID), s.cachedTimeout)
 		log.Printf("memList update: %s\n\n", s.sortedMemList)
 	}
 }
@@ -317,6 +317,10 @@ func (s *Server) JoinToGroup() error {
 }
 
 func (s *Server) pushSuspiciousCachedMessage(sStatus suspiciousStatus, nodeID string, inc uint8, timeout time.Duration) {
+	if _, ok := s.memList[nodeID]; !ok {
+		return
+	}
+
 	susMessage := s.suspiciousCachedMessage[nodeID]
 	if susMessage.Type == suspiciousFail {
 		return
@@ -482,7 +486,6 @@ func (s *Server) DealWithPayloads(payloads [][]byte) {
 			inc := uint8(message[2][0])
 			if nodeID == s.ID {
 				if inc >= s.memList[s.ID] {
-					log.Printf("++++++++++++++++++++++++ %s.Inc +1 +++++++++++++++++++++++", nodeID)
 					s.memList[s.ID] = inc + uint8(1)
 					s.pushSuspiciousCachedMessage(suspiciousAlive, nodeID, s.memList[s.ID], s.cachedTimeout)
 				}
@@ -523,8 +526,8 @@ func (s *Server) DealWithLeave(buf []byte) {
 		fmt.Println("-------- Leaving ---------")
 		fmt.Println("Server will quit after DisseminationTimeout!")
 		time.Sleep(s.cachedTimeout)
-		s.failureDetectionKey = false
-		s.serverLoopKey = false
+		//s.failureDetectionKey = false
+		//s.serverLoopKey = false
 		fmt.Println("------- The End -------")
 	}()
 }
