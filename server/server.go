@@ -469,8 +469,8 @@ func (s *Server) DealWithLeave(buf []byte) {
 		fmt.Println("-------- Leaving ---------")
 		fmt.Println("Server will quit after DisseminationTimeout!")
 		time.Sleep(s.cachedTimeout)
-		//s.failureDetectionKey = false
-		//s.serverLoopKey = false
+		s.failureDetectionKey = false
+		s.serverLoopKey = false
 		fmt.Println("------- The End -------")
 	}()
 }
