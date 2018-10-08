@@ -378,7 +378,7 @@ func (s *Server) getCachedMessages() [][]byte {
 		}
 	}
 
-	//log.Printf("getCachedMessages: s.suspiciousCachedMessage: %v", s.suspiciousCachedMessage)
+	log.Printf("getCachedMessages: s.suspiciousCachedMessage: %v", s.suspiciousCachedMessage)
 	for k, v := range s.suspiciousCachedMessage {
 		if time.Now().Sub(v.TS) > 0 {
 			delete(s.suspiciousCachedMessage, k)
