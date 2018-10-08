@@ -493,6 +493,10 @@ func (s *Server) DealWithPayloads(payloads [][]byte) {
 				s.pushJoinCachedMessage(nodeID, ttl, s.cachedTimeout)
 			}
 		case payloadLeave:
+			if _, ok := s.memList[nodeID]; ok {
+				log.Printf("------------------- Node Leave -------------------")
+				log.Printf("%s is leaving....\n\n", nodeID)
+			}
 			s.deleteNode(nodeID)
 			ttl := uint8(message[2][0]) - 1
 			if ttl > 0 {
