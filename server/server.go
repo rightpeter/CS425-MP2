@@ -160,6 +160,11 @@ func (s *Server) GetPort() int {
 	return s.config.Port
 }
 
+// GetMemberList return sortedMemList
+func (s *Server) GetMemberList() []string {
+	return s.sortedMemList
+}
+
 // SetPort setport for server
 func (s *Server) SetPort(port int) {
 	s.config.Port = port
