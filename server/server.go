@@ -108,6 +108,11 @@ func (s *Server) GetConfigPath() string {
 	return s.config.LogPath
 }
 
+// GetID export ID
+func (s *Server) GetID() string {
+	return s.ID
+}
+
 func (s *Server) findIndexInSortedMemList(nodeID string) int {
 	for k, v := range s.sortedMemList {
 		if v == nodeID {
