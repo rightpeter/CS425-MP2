@@ -658,7 +658,7 @@ func (s *Server) ServerLoop() {
 			continue
 		}
 		buf := recBuf[:n]
-		log.Printf("ServerLoop: receive message: %s", buf)
+		fmt.Printf("ServerLoop: receive message: %s", buf)
 
 		if len(buf) == 0 {
 			continue
