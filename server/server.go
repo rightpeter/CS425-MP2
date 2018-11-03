@@ -605,6 +605,7 @@ func (s *Server) FailureDetection() {
 			//s.generateFullPingList()
 		}
 	}
+	fmt.Printf("FailureDetection top!")
 }
 
 // buf: 0:s.ID:0_ip-ts_2:1_ip-ts_1:2_ip-ts_234:3_ip-ts_223
