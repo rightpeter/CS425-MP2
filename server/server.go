@@ -583,7 +583,7 @@ func (s *Server) FailureDetection() {
 			continue
 		}
 		nodeID := s.pingList[s.pingIter]
-		fmt.Printf("%s: A new ping to %s !\n", time.Now(), nodeID)
+		fmt.Printf("%s: A new ping to %s !\n", time.Format("2006-01-02 15:04:05"), nodeID)
 		ch := make(chan bool)
 		go s.Ping(nodeID, ch)
 
