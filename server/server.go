@@ -208,7 +208,6 @@ func (s *Server) generateFullPingList() error {
 	tmpPingList := s.sortedMemList
 	shuffleMemList(tmpPingList)
 	s.pingList = tmpPingList
-	i := s.findIndexInSortedMemList(s.ID)
 	s.pingIter = 0
 
 	//log.Printf("generatePingList: i: %d, memList: %v, pingList: %v", i, s.sortedMemList, s.pingList)
