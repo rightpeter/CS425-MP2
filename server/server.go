@@ -583,7 +583,7 @@ func (s *Server) FailureDetection() {
 			continue
 		}
 		nodeID := s.pingList[s.pingIter]
-		fmt.Printf("%s: A new ping to %s !\n", time.Now().Format("2006-01-02 15:04:05"), nodeID)
+		//fmt.Printf("%s: A new ping to %s !\n", time.Now().Format("2006-01-02 15:04:05"), nodeID)
 		ch := make(chan bool)
 		go s.Ping(nodeID, ch)
 
@@ -595,7 +595,7 @@ func (s *Server) FailureDetection() {
 		case <-time.After(time.Duration(s.config.PingTimeout) * time.Millisecond):
 			s.suspectNode(nodeID, s.failTimeout, s.cachedTimeout)
 		}
-		fmt.Printf("Finish ping for %s!\n", nodeID)
+		//fmt.Printf("Finish ping for %s!\n", nodeID)
 		s.pingIter++
 		if len(s.pingList) > 0 {
 			s.pingIter = s.pingIter % len(s.pingList)
@@ -606,7 +606,7 @@ func (s *Server) FailureDetection() {
 			//s.generateFullPingList()
 		}
 	}
-	fmt.Printf("FailureDetection top!")
+	fmt.Printf("FailureDetection stop!")
 }
 
 // buf: 0:s.ID:0_ip-ts_2:1_ip-ts_1:2_ip-ts_234:3_ip-ts_223
