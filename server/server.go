@@ -579,10 +579,10 @@ func (s *Server) DealWithMemList(bufList [][]byte) {
 func (s *Server) FailureDetection() {
 	for s.failureDetectionKey {
 		time.Sleep(time.Duration(s.config.PeriodTime) * time.Millisecond)
-		fmt.Printf("%v: A new ping !\n", time.Now())
 		if len(s.pingList) == 0 {
 			continue
 		}
+		fmt.Printf("%s: A new ping to %s !\n", time.Now(), nodeID)
 		nodeID := s.pingList[s.pingIter]
 		ch := make(chan bool)
 		go s.Ping(nodeID, ch)
@@ -595,6 +595,7 @@ func (s *Server) FailureDetection() {
 		case <-time.After(time.Duration(s.config.PingTimeout) * time.Millisecond):
 			s.suspectNode(nodeID, s.failTimeout, s.cachedTimeout)
 		}
+		fmt.Printf("Finish ping for %s!\n", nodeID)
 		s.pingIter++
 		if len(s.pingList) > 0 {
 			s.pingIter = s.pingIter % len(s.pingList)
