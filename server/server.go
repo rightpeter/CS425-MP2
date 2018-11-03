@@ -202,6 +202,7 @@ func (s *Server) generateSortedMemList() {
 	}
 	sort.Sort(sortMemList(tmpMemList))
 	s.sortedMemList = tmpMemList
+	fmt.Printf("generateSortedMemList %v", s.sortedMemList)
 }
 
 func (s *Server) generatePingList() error {
