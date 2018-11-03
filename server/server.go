@@ -700,5 +700,6 @@ func (s *Server) ServerLoop() {
 			replyBuf := s.generateMemListBuffer()
 			s.ServerConn.WriteTo(replyBuf, addr)
 		}
+		fmt.Println("ServerLoop: wait for a new read")
 	}
 }
