@@ -658,7 +658,7 @@ func (s *Server) ServerLoop() {
 			continue
 		}
 		buf := recBuf[:n]
-		//log.Printf("ServerLoop: receive message: %s", buf)
+		log.Printf("ServerLoop: receive message: %s", buf)
 
 		if len(buf) == 0 {
 			continue
@@ -700,6 +700,5 @@ func (s *Server) ServerLoop() {
 			replyBuf := s.generateMemListBuffer()
 			s.ServerConn.WriteTo(replyBuf, addr)
 		}
-		fmt.Println("ServerLoop: wait for a new read")
 	}
 }
