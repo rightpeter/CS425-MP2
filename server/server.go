@@ -259,8 +259,8 @@ func (s *Server) newNode(nodeID string, inc uint8) {
 		log.Println("----------------------------- New Node ------------------------------")
 		s.memList[nodeID] = inc
 		s.generateSortedMemList()
-		s.generateFullPingList()
-		//s.generatePingList()
+		//s.generateFullPingList()
+		s.generatePingList()
 		log.Printf("%s_%d join the group", nodeID, inc)
 		log.Printf("memList update: %s\n\n", s.sortedMemList)
 	} else {
@@ -277,8 +277,8 @@ func (s *Server) deleteNode(nodeID string) {
 		s.pushSuspiciousCachedMessage(suspiciousFail, nodeID, s.getIncFromCachedMessages(nodeID), s.cachedTimeout)
 		delete(s.memList, nodeID)
 		s.generateSortedMemList()
-		s.generateFullPingList()
-		//s.generatePingList()
+		//s.generateFullPingList()
+		s.generatePingList()
 		log.Printf("memList update: %s\n\n", s.sortedMemList)
 	}
 }
@@ -600,8 +600,8 @@ func (s *Server) FailureDetection() {
 		}
 
 		if s.pingIter == 0 {
-			//s.generatePingList()
-			s.generateFullPingList()
+			s.generatePingList()
+			//s.generateFullPingList()
 		}
 	}
 }
