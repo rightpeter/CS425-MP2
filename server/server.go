@@ -658,7 +658,6 @@ func (s *Server) ServerLoop() {
 			continue
 		}
 		buf := recBuf[:n]
-		fmt.Printf("ServerLoop: receive message: %s\n", buf)
 
 		if len(buf) == 0 {
 			continue
@@ -667,6 +666,7 @@ func (s *Server) ServerLoop() {
 		// bufList[0]: [messageType]
 		// bufList[1]: ip-ts
 		// bufList[2:]: payload messages
+		fmt.Printf("ServerLoop: receive message: messageType: %d, %s\n", bufList[0][0], buf)
 		switch messageType(bufList[0][0]) {
 		case messageAck:
 			if len(bufList) > 2 {
