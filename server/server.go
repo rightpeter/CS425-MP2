@@ -579,7 +579,7 @@ func (s *Server) DealWithMemList(bufList [][]byte) {
 func (s *Server) FailureDetection() {
 	for s.failureDetectionKey {
 		time.Sleep(time.Duration(s.config.PeriodTime) * time.Millisecond)
-		fmt.Println("A new ping !")
+		fmt.Printf("%v: A new ping !\n", time.Now())
 		if len(s.pingList) == 0 {
 			continue
 		}
