@@ -13,6 +13,7 @@ import (
 	"net"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"CS425/CS425-MP2/model"
@@ -86,13 +87,16 @@ type Server struct {
 	memList             map[string]uint8 // { "id-ts": 0 }
 	sortedMemList       []string         // ["id-ts", ...]
 	// { "id-ts": { "type" : 0, "int": 0 } }
-	suspiciousCachedMessage map[string]suspiciousMessage
-	joinCachedMessage       map[string]time.Time // {"ip-ts_ttl": timestamp}
-	leaveCachedMessage      map[string]time.Time // {"ip-ts_ttl": timestamp}
-	suspectList             map[string]time.Time // {"ip-ts": timestamp}
-	pingList                []string             // ['ip-ts']
-	failTimeout             time.Duration
-	cachedTimeout           time.Duration
+	suspiciousCachedMessage      map[string]suspiciousMessage
+	suspiciousCachedMessageMutex sync.Mutex
+	joinCachedMessage            map[string]time.Time // {"ip-ts_ttl": timestamp}
+	joinCachedMessageMutex       sync.Mutex
+	leaveCachedMessage           map[string]time.Time // {"ip-ts_ttl": timestamp}
+	leaveCachedMessageMutex      sync.Mutex
+	suspectList                  map[string]time.Time // {"ip-ts": timestamp}
+	pingList                     []string             // ['ip-ts']
+	failTimeout                  time.Duration
+	cachedTimeout                time.Duration
 }
 
 // NewServer init a server
@@ -327,6 +331,7 @@ func (s *Server) JoinToGroup() error {
 }
 
 func (s *Server) pushSuspiciousCachedMessage(sStatus suspiciousStatus, nodeID string, inc uint8, timeout time.Duration) {
+	s.suspiciousCachedMessageMutex.Lock()
 	if _, ok := s.memList[nodeID]; !ok {
 		return
 	}
@@ -342,30 +347,36 @@ func (s *Server) pushSuspiciousCachedMessage(sStatus suspiciousStatus, nodeID st
 	} else if inc == susMessage.Inc && susMessage.Type == suspiciousAlive && sStatus == suspiciousSuspect {
 		s.suspiciousCachedMessage[nodeID] = suspiciousMessage{Type: sStatus, Inc: inc, TS: newTS}
 	}
+	s.suspiciousCachedMessageMutex.Unlock()
 }
 
 func (s *Server) pushJoinCachedMessage(nodeID string, ttl uint8, timeout time.Duration) {
+	s.joinCachedMessageMutex.Lock()
 	buf := bytes.NewBufferString(nodeID)
 	buf.WriteByte('_')
 	buf.WriteByte(byte(ttl))
 	if _, ok := s.joinCachedMessage[buf.String()]; !ok {
 		s.joinCachedMessage[buf.String()] = time.Now().Add(timeout)
 	}
+	s.joinCachedMessageMutex.Unlock()
 }
 
 func (s *Server) pushLeaveCachedMessage(nodeID string, ttl uint8, timeout time.Duration) {
+	s.leaveCachedMessageMutex.Lock()
 	buf := bytes.NewBufferString(nodeID)
 	buf.WriteByte('_')
 	buf.WriteByte(byte(ttl))
 	if _, ok := s.leaveCachedMessage[buf.String()]; !ok {
 		s.leaveCachedMessage[buf.String()] = time.Now().Add(timeout)
 	}
+	s.leaveCachedMessageMutex.Unlock()
 }
 
 func (s *Server) getCachedMessages() [][]byte {
 	// Get cached messages from s.suspiciousCachedMessage, s.joinCachedMessage, s.leaveCachedMessage
 	messages := make([][]byte, 0)
 
+	s.joinCachedMessageMutex.Lock()
 	for k, v := range s.joinCachedMessage {
 		if time.Now().Sub(v) > 0 {
 			delete(s.joinCachedMessage, k)
@@ -376,7 +387,9 @@ func (s *Server) getCachedMessages() [][]byte {
 			messages = append(messages, buf)
 		}
 	}
+	s.joinCachedMessageMutex.Unlock()
 
+	s.leaveCachedMessageMutex.Lock()
 	//log.Printf("getCachedMessages: s.leaveCachedMessage: %v", s.leaveCachedMessage)
 	for k, v := range s.leaveCachedMessage {
 		if time.Now().Sub(v) > 0 {
@@ -389,7 +402,9 @@ func (s *Server) getCachedMessages() [][]byte {
 			messages = append(messages, buf)
 		}
 	}
+	s.leaveCachedMessageMutex.Unlock()
 
+	s.suspiciousCachedMessageMutex.Lock()
 	//log.Printf("getCachedMessages: s.suspiciousCachedMessage: %v", s.suspiciousCachedMessage)
 	for k, v := range s.suspiciousCachedMessage {
 		if time.Now().Sub(v.TS) > 0 {
@@ -411,6 +426,7 @@ func (s *Server) getCachedMessages() [][]byte {
 			messages = append(messages, buf)
 		}
 	}
+	s.suspiciousCachedMessageMutex.Unlock()
 
 	return messages
 }
